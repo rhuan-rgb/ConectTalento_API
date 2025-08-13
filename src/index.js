@@ -1,4 +1,4 @@
-//este arquivo (index.js) serve como um inicializador, ou seja, 
+//este arquivo (index.js) serve como um inicializador, ou seja,
 
 const express = require("express"); //Importa o módulo Express
 
@@ -6,7 +6,7 @@ const cors = require("cors");
 require("dotenv-safe").config();
 const jwt = require("jsonwebtoken");
 
-const testConnect = require("./db/testConnect")
+const testConnect = require("./db/testConnect");
 
 class AppController {
   //Define uma classe para organizar a lógica da aplicação
@@ -24,8 +24,8 @@ class AppController {
   }
 
   routes() {
-    const apiRoutes= require('./routes/apiRoutes')
-    this.express.use('/api/v1/',apiRoutes);// Definição da URL Base
+    const apiRoutes = require("./routes/apiRoutes");
+    this.express.use("/api/v1/", apiRoutes); // Definição da URL Base
   }
 }
 
