@@ -2,7 +2,7 @@ const router = require('express').Router();
 const verifyJWT = require("../services/verifyJWT");
 
 const userController = require("../controllers/userController");
-const ideiaController = require("../controllers/ideiaController");
+const projectController = require("../controllers/projectController");
 
 // Rotas userController
 router.post('/user', userController.createUser);
@@ -11,12 +11,12 @@ router.delete('/user/:id', verifyJWT, userController.deleteUser);
 router.post('/login', userController.loginUser);
 router.get("/user", userController.getAllUsers);
 
-// Rotas ideiaController
-// router.post('/ideia', verifyJWT, ideiaController.createIdeia);
-// router.get('/ideia', ideiaController.getAllIdeia);
-// router.get('/ideia', ideiaController.getIdeia);
-// router.put('/ideia', verifyJWT, ideiaController.updateIdeia);
-// router.delete('/ideia/:id', verifyJWT, ideiaController.deleteIdeia);
+// Rotas projectController
+// router.post('/project', verifyJWT, projectController.createProject);
+// router.get('/project', projectController.getAllProjects);
+// router.get('/project', projectController.getProject);
+// router.put('/project', verifyJWT, projectController.updateProject);
+// router.delete('/project/:id', verifyJWT, projectController.deleteProject);
 
 
 module.exports = router;

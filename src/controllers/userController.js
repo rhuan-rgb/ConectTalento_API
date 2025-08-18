@@ -4,7 +4,7 @@ const validateUser = require("../services/validateUser");
 
 module.exports = class userController {
   static async createUser(req, res) {
-    const { email, password, biografia, username, plano, cpf } = req.body;
+    const { email, password, biografia, username, plano } = req.body;
 
     // Validação dos dados (incluindo CPF)
     const validationError = validateUser(req.body);
@@ -14,10 +14,10 @@ module.exports = class userController {
 
     try {
       // Consulta para inserir o usuário na tabela (adicionando o CPF)
-      const query = `INSERT INTO usuario (email, senha, username, biografia, plano, cpf) VALUES (?, ?, ?, ?, ?, ?)`;
+      const query = `INSERT INTO usuario (email, senha, username, biografia, plano) VALUES (?, ?, ?, ?, ?, ?)`;
       connect.query(
         query,
-        [email, password, username, biografia, plano, cpf], // incluindo CPF aqui
+        [email, password, username, biografia, plano], // incluindo CPF aqui
         (err) => {
           if (err) {
             console.log(err);
@@ -58,7 +58,7 @@ module.exports = class userController {
     const query = `SELECT * FROM usuario WHERE email = ?`;
 
     try {
-      connect.query(query, [cpf], (err, results) => {
+      connect.query(query, [email], (err, results) => {
         if (err) {
           console.log(err);
           return res.status(500).json({ error: "Erro Interno do Servidor" });
@@ -100,7 +100,7 @@ module.exports = class userController {
   }
 
   static async getAllUsers(req, res) {
-    const query = `SELECT id_usuario, email, username, biografia, plano, cpf FROM usuario`;
+    const query = `SELECT id_usuario, email, username, biografia, plano FROM usuario`;
 
     try {
       connect.query(query, function (err, results) {
@@ -120,7 +120,7 @@ module.exports = class userController {
   }
 
   static async updateUser(req, res) {
-    const { email, password, id_usuario, biografia, username, plano, cpf } =
+    const { email, password, id_usuario, biografia, username, plano} =
       req.body;
 
     // Validação dos dados (incluindo CPF)
@@ -129,14 +129,13 @@ module.exports = class userController {
       return res.status(400).json(validationError);
     }
 
-    const query = `UPDATE usuario SET username=?, email=?, senha=?, biografia=?, plano=?, cpf=? WHERE id_usuario = ?`;
+    const query = `UPDATE usuario SET username=?, email=?, senha=?, biografia=?, plano=? WHERE id_usuario = ?`;
     const values = [
       username,
       email,
       password,
       biografia,
       plano,
-      cpf,
       id_usuario,
     ];
 
