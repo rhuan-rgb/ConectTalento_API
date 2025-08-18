@@ -45,17 +45,17 @@ module.exports = class userController {
   }
 
   static async loginUser(req, res) {
-    const { cpf, password } = req.body;
+    const { email, password } = req.body;
 
     // Verificar se o CPF e a senha foram fornecidos
-    if (!cpf || !password) {
+    if (!email || !password) {
       return res
         .status(400)
-        .json({ error: "O CPF e a Senha são obrigatórios para o login!" });
+        .json({ error: "O Email e a Senha são obrigatórios para o login!" });
     }
 
-    // Alterar a consulta para buscar pelo CPF
-    const query = `SELECT * FROM usuario WHERE cpf = ?`;
+    // Alterar a consulta para buscar pelo email
+    const query = `SELECT * FROM usuario WHERE email = ?`;
 
     try {
       connect.query(query, [cpf], (err, results) => {
