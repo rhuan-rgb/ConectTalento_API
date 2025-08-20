@@ -1,20 +1,36 @@
-module.exports = function validateUser({
-  cpf,
-  email,
-  password,
-  biografia,
-  username,
-  plano,
-}) {
-  if (!cpf || !email || !password || !biografia || !username || !plano) {
-    return { error: "Todos os campos devem ser preenchidos" };
-  } else if (isNaN(cpf) || cpf.length !== 11) {
-    return {
-      error: "CPF inválido. Deve conter exatamente 11 dígitos numéricos",
-    };
-  } else if (!email.includes("@")) {
-    return { error: "Email inválido. Deve conter @" };
-  }
+import sendMail from "../services/nodemailerConfig"; // verificar se o caminho está correto
 
-  return false;
-};
+
+const validateUser = {
+    validateData: function ({
+      cpf,
+      password,
+      biografia,
+      username,
+      plano,
+    }) {
+      if (!cpf || !password || !biografia || !username || !plano) {
+        return { error: "Todos os campos devem ser preenchidos" };
+      } else if (isNaN(cpf) || cpf.length !== 11) {
+        return {
+          error: "CPF inválido. Deve conter exatamente 11 dígitos numéricos",
+        };
+      }
+  
+      return false; // false = sem erros
+    },
+  
+    validateDataEmail: function (email) {
+      const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!email || !regex.test(email)) {
+        return { error: "Email inválido" };
+      }
+      return false;
+    },
+
+    validateEmail(email){
+        send
+    }
+  };
+  
+  module.exports = validateUser;  
