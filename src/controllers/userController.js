@@ -4,41 +4,43 @@ const validateUser = require("../services/validateUser");
 
 module.exports = class userController {
   static async createUser(req, res) {
-    const { email, password, biografia, username, plano } = req.body;
+    const { email, password, confirmPassword, username } = req.body;
 
-    // Validação dos dados (incluindo CPF)
+    // Verifica se todos os campos obrigatórios foram preenchidos
+    if (!email || !password || !confirmPassword || !username) {
+      return res
+        .status(400)
+        .json({ error: "Todos os campos são obrigatórios." });
+    }
+
+    // Verifica se as senhas coincidem
+    if (password !== confirmPassword) {
+      return res.status(400).json({ error: "As senhas não coincidem" });
+    }
+
+    // Validação dos dados (incluindo CPF ou outros)
     const validationError = validateUser(req.body);
     if (validationError) {
       return res.status(400).json(validationError);
     }
 
     try {
-      // Consulta para inserir o usuário na tabela (adicionando o CPF)
-      const query = `INSERT INTO usuario (email, senha, username, biografia, plano) VALUES (?, ?, ?, ?, ?, ?)`;
-      connect.query(
-        query,
-        [email, password, username, biografia, plano], // incluindo CPF aqui
-        (err) => {
-          if (err) {
-            console.log(err);
-            if (err.code === "ER_DUP_ENTRY") {
-              if (err.message.includes("email")) {
-                return res.status(400).json({ error: "Email já cadastrado" });
-              }
-              if (err.message.includes("cpf")) {
-                return res.status(400).json({ error: "CPF já cadastrado" });
-              }
-            } else {
-              return res
-                .status(500)
-                .json({ error: "Erro interno do servidor", err });
+      const query = `INSERT INTO usuario (email, senha, username) VALUES (?, ?, ?)`;
+      connect.query(query, [email, password, username], (err) => {
+        if (err) {
+          console.log(err);
+          if (err.code === "ER_DUP_ENTRY") {
+            if (err.message.includes("email")) {
+              return res.status(400).json({ error: "Email já cadastrado" });
             }
+          } else {
+            return res
+              .status(500)
+              .json({ error: "Erro interno do servidor", err });
           }
-          return res
-            .status(201)
-            .json({ message: "Usuário criado com sucesso" });
         }
-      );
+        return res.status(201).json({ message: "Usuário criado com sucesso" });
+      });
     } catch (error) {
       return res.status(500).json({ error });
     }
@@ -120,8 +122,20 @@ module.exports = class userController {
   }
 
   static async updateUser(req, res) {
-    const { email, password, id_usuario, biografia, username, plano} =
-      req.body;
+    const {
+      email,
+      password,
+      confirmPassword,
+      id_usuario,
+      biografia,
+      username,
+      plano,
+    } = req.body;
+
+    // Verifica se as senhas coincidem
+    if (password !== confirmPassword) {
+      return res.status(400).json({ error: "As senhas não coincidem" });
+    }
 
     // Validação dos dados (incluindo CPF)
     const validationError = validateUser(req.body);
@@ -133,7 +147,7 @@ module.exports = class userController {
     const values = [
       username,
       email,
-      password,
+      password, // Senha já confirmada
       biografia,
       plano,
       id_usuario,
