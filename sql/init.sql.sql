@@ -1,10 +1,10 @@
 CREATE DATABASE  IF NOT EXISTS `conectalento` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci */ /*!80016 DEFAULT ENCRYPTION='N' */;
 USE `conectalento`;
--- MySQL dump 10.13  Distrib 8.0.36, for Win64 (x86_64)
+-- MySQL dump 10.13  Distrib 8.0.43, for Win64 (x86_64)
 --
 -- Host: localhost    Database: conectalento
 -- ------------------------------------------------------
--- Server version	8.0.36
+-- Server version	8.0.43
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -108,7 +108,6 @@ DROP TABLE IF EXISTS `usuario`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `usuario` (
   `id_usuario` int NOT NULL AUTO_INCREMENT,
-  `cpf` char(11) NOT NULL,
   `email` varchar(255) NOT NULL,
   `senha` varchar(255) NOT NULL,
   `biografia` varchar(255) DEFAULT NULL,
@@ -116,7 +115,6 @@ CREATE TABLE `usuario` (
   `plano` varchar(45) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL,
   PRIMARY KEY (`id_usuario`),
   UNIQUE KEY `id_usuario_UNIQUE` (`id_usuario`),
-  UNIQUE KEY `cpf_UNIQUE` (`cpf`),
   UNIQUE KEY `email_UNIQUE` (`email`)
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -127,7 +125,7 @@ CREATE TABLE `usuario` (
 
 LOCK TABLES `usuario` WRITE;
 /*!40000 ALTER TABLE `usuario` DISABLE KEYS */;
-INSERT INTO `usuario` VALUES (1,'12345678901','usuario@exemplo.com','senha123','Amo programar!','usuario123','Premium');
+INSERT INTO `usuario` VALUES (1,'usuario@exemplo.com','senha123','Amo programar!','usuario123','Premium');
 /*!40000 ALTER TABLE `usuario` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -148,4 +146,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-08-13 10:07:49
+-- Dump completed on 2025-08-20 22:10:41
