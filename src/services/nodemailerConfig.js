@@ -1,4 +1,5 @@
 const nodemailer = require("nodemailer");
+const crypto = require("crypto");
 
 // Create a test account or replace with real credentials.
 const transporter = nodemailer.createTransport({
@@ -13,12 +14,15 @@ const transporter = nodemailer.createTransport({
 
 // Wrap in an async IIFE so we can use await.
 const sendMail = async (userEmail) => {
+  function mailCode(){
+
+  }
   try {
     const info = await transporter.sendMail({
       from: `ConectTalento <${process.env.nodemailer_user}>`,
       to: userEmail,
       subject: "hello",
-      text: "hehe", // plain‑text body
+      text: "salve jao", // plain‑text body
       // html: html_, // HTML body
     });
   } catch (err) {
