@@ -11,12 +11,13 @@ router.delete('/user/:id', verifyJWT, userController.deleteUser);
 router.post('/login', userController.loginUser);
 router.get("/user", userController.getAllUsers);
 
-// Rotas projectController
-// router.post('/project', verifyJWT, projectController.createProject);
-// router.get('/project', projectController.getAllProjects);
-// router.get('/project', projectController.getProject);
-// router.put('/project', verifyJWT, projectController.updateProject);
-// router.delete('/project/:id', verifyJWT, projectController.deleteProject);
+
+//Rotas projetoController
+router.post('/project', verifyJWT, projectController.createProject);
+router.get("/projects", projectController.getAllProjects);
+router.get("/project/:id", projectController.getProjectByIdUser);
+router.put("/project/:id", projectController.updateProject);
+router.delete("/project/:id", projectController.deleteProject);
 
 
 module.exports = router;
