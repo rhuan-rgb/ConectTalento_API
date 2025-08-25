@@ -8,12 +8,12 @@ services:
     volumes: 
       - .:/usr/app
     depends_on:
-      - root
+      - db
   db:
     image: mysql:8.0
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: 190991
+      MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: conectalento
     ports:
      - "3307:3307"

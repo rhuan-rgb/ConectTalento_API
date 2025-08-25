@@ -104,21 +104,39 @@ module.exports = class userController {
   static async getAllUsers(req, res) {
     const query = `SELECT id_usuario, email, username, biografia, plano FROM usuario`;
 
-    try {
-      connect.query(query, function (err, results) {
-        if (err) {
-          console.error(err);
-          return res.status(500).json({ error: "Erro Interno do Servidor" });
-        }
-        return res.status(200).json({
-          message: "Mostrando usuários: ",
-          users: results,
-        });
+    connect.query(query, (err, results) => {
+      if (err) {
+        console.error("Erro ao buscar usuários:", err);
+        return res.status(500).json({ error: "Erro interno do servidor" });
+      }
+
+      return res.status(200).json({
+        message: "Lista de todos os usuários",
+        users: results,
       });
-    } catch (error) {
-      console.error("Erro ao executar a consulta:", error);
-      return res.status(500).json({ error: "Um erro foi encontrado." });
-    }
+    });
+  }
+
+  static async getUserById(req, res) {
+    const userId = req.params.id;
+
+    const query = `SELECT id_usuario, email, username, biografia, plano FROM usuario WHERE id_usuario = ?`;
+
+    connect.query(query, [userId], (err, results) => {
+      if (err) {
+        console.error("Erro ao buscar usuário por ID:", err);
+        return res.status(500).json({ error: "Erro interno do servidor" });
+      }
+
+      if (results.length === 0) {
+        return res.status(404).json({ message: "Usuário não encontrado" });
+      }
+
+      return res.status(200).json({
+        message: "Usuário encontrado",
+        user: results[0],
+      });
+    });
   }
 
   static async updateUser(req, res) {
