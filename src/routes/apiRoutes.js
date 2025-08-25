@@ -12,6 +12,7 @@ router.post("/login", userController.loginUser);
 router.get("/user", userController.getAllUsers);
 router.get("/user/:id", userController.getUserById);
 
+
 //Rotas projetoController
 router.post("/project", verifyJWT, projectController.createProject);
 router.get("/projects", projectController.getAllProjects);

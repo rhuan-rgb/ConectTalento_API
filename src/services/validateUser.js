@@ -1,3 +1,5 @@
+
+const sendMail = require("./nodemailerConfig"); // verificar se o caminho está correto
 module.exports = function validateUser({
   email,
   password,
@@ -10,5 +12,21 @@ module.exports = function validateUser({
     return { error: "Email inválido. Deve conter @" };
   }
 
-  return false;
-};
+
+const validateUser = {
+    
+  
+    validateDataEmail: function (email) {
+      const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!email || !regex.test(email)) {
+        return { error: "Email inválido" };
+      }
+      return false;
+    },
+
+    validateEmail: function (email){
+        sendMail(email)
+    }
+  };
+  
+  module.exports = validateUser;  
