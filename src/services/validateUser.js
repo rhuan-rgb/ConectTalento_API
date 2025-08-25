@@ -1,4 +1,4 @@
-import sendMail from "../services/nodemailerConfig"; // verificar se o caminho está correto
+import sendMail from "./nodemailerConfig"; // verificar se o caminho está correto
 
 
 const validateUser = {
@@ -28,8 +28,8 @@ const validateUser = {
       return false;
     },
 
-    validateEmail(email){
-        send
+    validateEmail: function (email){
+        sendMail(email)
     }
   };
   
