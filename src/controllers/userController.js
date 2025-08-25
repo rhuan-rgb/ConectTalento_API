@@ -20,10 +20,11 @@ module.exports = class userController {
     }
 
     // Validação dos dados (incluindo CPF ou outros)
-    const validationError = validateUser.validateData(req.body);
+    const validationError = validateUser.validateEmail(req.body.email);
     if (validationError) {
       return res.status(400).json(validationError);
     }
+    else{
 
     try {
       const query = `INSERT INTO usuario (email, senha, username) VALUES (?, ?, ?)`;
@@ -46,7 +47,7 @@ module.exports = class userController {
       return res.status(500).json({ error });
     }
   }
-
+ }
   static async loginUser(req, res) {
     const { email, password } = req.body;
 
