@@ -5,7 +5,7 @@ const validateUser = require("../services/validateUser");
 
 module.exports = class userController {
   static async createUser(req, res) {
-    const { email, password, confirmPassword, username } = req.body;
+    const { email, password, confirmPassword, username, code } = req.body;
 
     // Verifica se todos os campos obrigatórios foram preenchidos
     if (!email || !password || !confirmPassword || !username) {
@@ -19,35 +19,46 @@ module.exports = class userController {
       return res.status(400).json({ error: "As senhas não coincidem" });
     }
 
-    // Validação dos dados (incluindo CPF ou outros)
-    const validationError = validateUser.validateEmail(req.body.email);
-    if (validationError) {
-      return res.status(400).json(validationError);
-    }
-    else{
-
-    try {
-      const query = `INSERT INTO usuario (email, senha, username) VALUES (?, ?, ?)`;
-      connect.query(query, [email, password, username], (err) => {
-        if (err) {
-          console.log(err);
-          if (err.code === "ER_DUP_ENTRY") {
-            if (err.message.includes("email")) {
-              return res.status(400).json({ error: "Email já cadastrado" });
+    
+    if (code == "") {
+      const generatedCode = validateUser.validateEmail(email);
+      if (generatedCode) {
+        return res.status(202).json({ message: "Email enviado", registered: false });
+      }
+    } else {
+      const codeOk = validateUser.validateCode(email, code);
+      if (codeOk) {
+        try {
+          const query = `INSERT INTO usuario (email, senha, username, code) VALUES (?, ?, ?, ?)`;
+          connect.query(query, [email, password, username, code], (err) => {
+            if (err) {
+              console.log(err);
+              if (err.code === "ER_DUP_ENTRY") {
+                if (err.message.includes("email")) {
+                  return res.status(400).json({ error: "Email já cadastrado" });
+                }
+              } else {
+                return res
+                  .status(500)
+                  .json({ error: "Erro interno do servidor", err });
+              }
             }
-          } else {
-            return res
-              .status(500)
-              .json({ error: "Erro interno do servidor", err });
-          }
+            return res.status(201).json({ message: "Usuário criado com sucesso", registered: true });
+          });
+        } catch (error) {
+          return res.status(500).json({ error });
         }
-        return res.status(201).json({ message: "Usuário criado com sucesso" });
-      });
-    } catch (error) {
-      return res.status(500).json({ error });
+      } else {
+        return res.status(400).json({message: "Código inválido", registered: false});
+      }
+
     }
+
+
+
+
+
   }
- }
   static async loginUser(req, res) {
     const { email, password } = req.body;
 
