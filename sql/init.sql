@@ -38,6 +38,7 @@ CREATE TABLE `code_validacao` (
 
 LOCK TABLES `code_validacao` WRITE;
 /*!40000 ALTER TABLE `code_validacao` DISABLE KEYS */;
+INSERT INTO `code_validacao` VALUES ('AQaqf7','2025-08-27 00:59:02','rhuan08.lima@gmail.com'),('cQaZxT','2025-08-27 00:58:17','rhuan08.lima@gmail.com'),('dK3ajt','2025-08-27 01:05:42','rhuan08.lima@gmail.com'),('eMvQKJ','2025-08-27 00:58:29','rhuan08.lima@gmail.com'),('FwmoxW','2025-08-27 00:19:14','rhuan.lima.cmd@gmail.com'),('L7PVk5','2025-08-27 00:43:30','rhuan08.lima@gmail.com'),('pukncw','2025-08-27 00:33:33','rhuan08.lima@gmail.com'),('qCU94R','2025-08-27 00:42:16','rhuan08.lima@gmail.com'),('qiKos9','2025-08-27 01:21:56','rhuan09.lima@gmail.com'),('s6YjZx','2025-08-27 00:58:53','rhuan08.lima@gmail.com'),('T97pDa','2025-08-27 00:26:58','rhuan08.lima@gmail.com'),('yLhZSi','2025-08-27 01:21:49','rhuan09.lima@gmail.com'),('yyXYEy','2025-08-27 00:28:20','rhuan08.lima@gmail.com');
 /*!40000 ALTER TABLE `code_validacao` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -140,7 +141,7 @@ CREATE TABLE `usuario` (
   PRIMARY KEY (`id_usuario`),
   UNIQUE KEY `id_usuario_UNIQUE` (`id_usuario`),
   UNIQUE KEY `email_UNIQUE` (`email`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -149,7 +150,7 @@ CREATE TABLE `usuario` (
 
 LOCK TABLES `usuario` WRITE;
 /*!40000 ALTER TABLE `usuario` DISABLE KEYS */;
-INSERT INTO `usuario` VALUES (1,'usuario@exemplo.com','senha123','Amo programar!','usuario123','Premium');
+INSERT INTO `usuario` VALUES (1,'usuario@exemplo.com','senha123','Amo programar!','usuario123','Premium'),(3,'rhuan.lima.cmd@gmail.com','$2b$10$zFlmLS0CWpWPZPOjsR8MJuFVpK00/oKkc4ziJJm3OUz6ZOX.WNyba',NULL,'rhuan',NULL),(8,'rhuan08.lima@gmail.com','$2b$10$V3fT3kJtx/PaQpOTM5zMw.Tf1MBmd76WU1PnsWhuZDgqKfx/Hoeaa',NULL,'rhuan',NULL),(10,'rhuan09.lima@gmail.com','$2b$10$h7s3uZeUgXzzrK3i0K6U2OWhtdhbSLFI0AddTv/hcN4nqYGxkFloy',NULL,'rhuan',NULL);
 /*!40000 ALTER TABLE `usuario` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -170,4 +171,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-08-26 21:12:42
+-- Dump completed on 2025-08-27  1:26:27
