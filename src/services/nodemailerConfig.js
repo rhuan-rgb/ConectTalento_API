@@ -24,7 +24,7 @@ function generateCode(userEmail) {
 
   const query = `
     INSERT INTO code_validacao (code, code_expira_em, email)
-    VALUES (?, NOW() + INTERVAL 10 MINUTE, ?);
+    VALUES (?, NOW() + INTERVAL 15 MINUTE, ?);
   `;
 
   return new Promise((resolve, reject) => {
@@ -75,7 +75,6 @@ const sendMail = async (userEmail) => {
       text: `Aqui está seu código, copie e cole no site: ${code}`,
     });
 
-    console.log(info);
     return code;
   } catch (err) {
     console.error("mensagem não enviada:", err);

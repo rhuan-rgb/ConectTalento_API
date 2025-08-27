@@ -1,6 +1,7 @@
 const connect = require("../db/connect");
 const jwt = require("jsonwebtoken");
 const validateUser = require("../services/validateUser");
+const bcrypt = require("bcrypt");
 
 
 module.exports = class userController {
@@ -19,22 +20,34 @@ module.exports = class userController {
       return res.status(400).json({ error: "As senhas não coincidem" });
     }
 
-    
+    if (!validateUser.validateDataEmail) {
+      return res.status(400).json({ error: "Email inválido" });
+    }
+
+
     if (code == "") {
+
+      const emailExistente = await validateUser.checkIfEmailExists(email);
+
+      if (emailExistente) {
+        return res.status(400).json({ error: "Email já cadastrado" });
+      }
+
       const generatedCode = await validateUser.validateEmail(email);
+      
       if (generatedCode) {
-        console.log(generatedCode);
         return res.status(202).json({ message: "Email enviado", registered: false });
       }
     } else {
+
       const codeOk = await validateUser.validateCode(email, code);
-      console.log(codeOk);
-      if (codeOk) {
+
+      if (codeOk === true) {
         try {
+          const hashedPassword = await validateUser.hashPassword(password);
           const query = `INSERT INTO usuario (email, senha, username) VALUES (?, ?, ?)`;
-          connect.query(query, [email, password, username, code], (err) => {
+          connect.query(query, [email, hashedPassword, username], (err) => {
             if (err) {
-              console.log(err);
               if (err.code === "ER_DUP_ENTRY") {
                 if (err.message.includes("email")) {
                   return res.status(400).json({ error: "Email já cadastrado" });
@@ -50,8 +63,12 @@ module.exports = class userController {
         } catch (error) {
           return res.status(500).json({ error });
         }
-      } else {
-        return res.status(400).json({message: "Código inválido", registered: false});
+      } else if (codeOk === "expirado") {
+        return res.status(400).json({ message: "Código expirado. Tente cadastrar-se novamente", registered: false });
+      }
+
+      else {
+        return res.status(400).json({ message: "Código inválido", registered: false });
       }
 
     }
@@ -64,18 +81,18 @@ module.exports = class userController {
   static async loginUser(req, res) {
     const { email, password } = req.body;
 
-    // Verificar se o CPF e a senha foram fornecidos
+
     if (!email || !password) {
       return res
         .status(400)
         .json({ error: "O Email e a Senha são obrigatórios para o login!" });
     }
 
-    // Alterar a consulta para buscar pelo email
+
     const query = `SELECT * FROM usuario WHERE email = ?`;
 
     try {
-      connect.query(query, [email], (err, results) => {
+      connect.query(query, [email], async (err, results) => {
         if (err) {
           console.log(err);
           return res.status(500).json({ error: "Erro Interno do Servidor" });
@@ -89,7 +106,9 @@ module.exports = class userController {
         const user = results[0];
 
         // Verificar se a senha corresponde
-        if (user.senha !== password) {
+
+        const senhaValida = await validateUser.comparePassword(password, user.senha);
+        if (!senhaValida) {
           return res.status(403).json({ error: "Senha Incorreta" });
         }
 
