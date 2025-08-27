@@ -27,10 +27,17 @@ const validateUser = {
   },
 
   validateCode: function (userEmail, code){ //criar index pro code no banco de dados
-    const query = `SELECT code FROM usuario WHERE email = ${userEmail}`;
-    connect.query(query, (err) =>{
+    const query = `SELECT code FROM code_validacao WHERE email = ? and code = ?`;
+    connect.query(query, [userEmail, code], (err, results) =>{
       if(err){
         console.log(err);
+      } else {
+        if(results[0].code === code){
+          return true
+        } else {
+          return false
+        }
+        
       }
     })
   }

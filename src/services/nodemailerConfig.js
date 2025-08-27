@@ -24,7 +24,7 @@ function generateCode(userEmail) {
   // checa se este código já está vinculado a outro usuário
   const query = `INSERT INTO code_validacao (code, code_expira_em, email) VALUES (?, NOW() + INTERVAL 10 MINUTE, ?);`;
   try {
-    connect.query(query, code, userEmail, (err) => {
+    connect.query(query, [code, userEmail], (err) => {
       if (err === "ER_DUP_ENTRY") {
         return false;
       } else if (err) {
