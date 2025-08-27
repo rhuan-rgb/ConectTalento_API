@@ -1,64 +1,98 @@
 const connect = require("../db/connect");
 const jwt = require("jsonwebtoken");
 const validateUser = require("../services/validateUser");
+const bcrypt = require("bcrypt");
+
 
 module.exports = class userController {
   static async createUser(req, res) {
-    const { email, password, biografia, username, plano, cpf } = req.body;
+    const { email, password, confirmPassword, username, code } = req.body;
 
-    // Validação dos dados (incluindo CPF)
-    const validationError = validateUser(req.body);
-    if (validationError) {
-      return res.status(400).json(validationError);
+    // Verifica se todos os campos obrigatórios foram preenchidos
+    if (!email || !password || !confirmPassword || !username) {
+      return res
+        .status(400)
+        .json({ error: "Todos os campos são obrigatórios." });
     }
 
-    try {
-      // Consulta para inserir o usuário na tabela (adicionando o CPF)
-      const query = `INSERT INTO usuario (email, senha, username, biografia, plano, cpf) VALUES (?, ?, ?, ?, ?, ?)`;
-      connect.query(
-        query,
-        [email, password, username, biografia, plano, cpf], // incluindo CPF aqui
-        (err) => {
-          if (err) {
-            console.log(err);
-            if (err.code === "ER_DUP_ENTRY") {
-              if (err.message.includes("email")) {
-                return res.status(400).json({ error: "Email já cadastrado" });
+    // Verifica se as senhas coincidem
+    if (password !== confirmPassword) {
+      return res.status(400).json({ error: "As senhas não coincidem" });
+    }
+
+    if (!validateUser.validateDataEmail) {
+      return res.status(400).json({ error: "Email inválido" });
+    }
+
+
+    if (code == "") {
+
+      const emailExistente = await validateUser.checkIfEmailExists(email);
+
+      if (emailExistente) {
+        return res.status(400).json({ error: "Email já cadastrado" });
+      }
+
+      const generatedCode = await validateUser.validateEmail(email);
+      
+      if (generatedCode) {
+        return res.status(202).json({ message: "Email enviado", registered: false });
+      }
+    } else {
+
+      const codeOk = await validateUser.validateCode(email, code);
+
+      if (codeOk === true) {
+        try {
+          const hashedPassword = await validateUser.hashPassword(password);
+          const query = `INSERT INTO usuario (email, senha, username) VALUES (?, ?, ?)`;
+          connect.query(query, [email, hashedPassword, username], (err) => {
+            if (err) {
+              if (err.code === "ER_DUP_ENTRY") {
+                if (err.message.includes("email")) {
+                  return res.status(400).json({ error: "Email já cadastrado" });
+                }
+              } else {
+                return res
+                  .status(500)
+                  .json({ error: "Erro interno do servidor", err });
               }
-              if (err.message.includes("cpf")) {
-                return res.status(400).json({ error: "CPF já cadastrado" });
-              }
-            } else {
-              return res
-                .status(500)
-                .json({ error: "Erro interno do servidor", err });
             }
-          }
-          return res
-            .status(201)
-            .json({ message: "Usuário criado com sucesso" });
+            return res.status(201).json({ message: "Usuário criado com sucesso", registered: true });
+          });
+        } catch (error) {
+          return res.status(500).json({ error });
         }
-      );
-    } catch (error) {
-      return res.status(500).json({ error });
-    }
-  }
+      } else if (codeOk === "expirado") {
+        return res.status(400).json({ message: "Código expirado. Tente cadastrar-se novamente", registered: false });
+      }
 
+      else {
+        return res.status(400).json({ message: "Código inválido", registered: false });
+      }
+
+    }
+
+
+
+
+
+  }
   static async loginUser(req, res) {
     const { email, password } = req.body;
 
-    // Verificar se o CPF e a senha foram fornecidos
+
     if (!email || !password) {
       return res
         .status(400)
         .json({ error: "O Email e a Senha são obrigatórios para o login!" });
     }
 
-    // Alterar a consulta para buscar pelo email
+
     const query = `SELECT * FROM usuario WHERE email = ?`;
 
     try {
-      connect.query(query, [cpf], (err, results) => {
+      connect.query(query, [email], async (err, results) => {
         if (err) {
           console.log(err);
           return res.status(500).json({ error: "Erro Interno do Servidor" });
@@ -72,7 +106,9 @@ module.exports = class userController {
         const user = results[0];
 
         // Verificar se a senha corresponde
-        if (user.senha !== password) {
+
+        const senhaValida = await validateUser.comparePassword(password, user.senha);
+        if (!senhaValida) {
           return res.status(403).json({ error: "Senha Incorreta" });
         }
 
@@ -100,7 +136,7 @@ module.exports = class userController {
   }
 
   static async getAllUsers(req, res) {
-    const query = `SELECT id_usuario, email, username, biografia, plano, cpf FROM usuario`;
+    const query = `SELECT id_usuario, email, username, biografia, plano FROM usuario`;
 
     try {
       connect.query(query, function (err, results) {
@@ -120,8 +156,20 @@ module.exports = class userController {
   }
 
   static async updateUser(req, res) {
-    const { email, password, id_usuario, biografia, username, plano, cpf } =
-      req.body;
+    const {
+      email,
+      password,
+      confirmPassword,
+      id_usuario,
+      biografia,
+      username,
+      plano,
+    } = req.body;
+
+    // Verifica se as senhas coincidem
+    if (password !== confirmPassword) {
+      return res.status(400).json({ error: "As senhas não coincidem" });
+    }
 
     // Validação dos dados (incluindo CPF)
     const validationError = validateUser(req.body);
@@ -129,14 +177,13 @@ module.exports = class userController {
       return res.status(400).json(validationError);
     }
 
-    const query = `UPDATE usuario SET username=?, email=?, senha=?, biografia=?, plano=?, cpf=? WHERE id_usuario = ?`;
+    const query = `UPDATE usuario SET username=?, email=?, senha=?, biografia=?, plano=? WHERE id_usuario = ?`;
     const values = [
       username,
       email,
-      password,
+      password, // Senha já confirmada
       biografia,
       plano,
-      cpf,
       id_usuario,
     ];
 

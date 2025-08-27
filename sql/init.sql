@@ -1,10 +1,10 @@
 CREATE DATABASE  IF NOT EXISTS `conectalento` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci */ /*!80016 DEFAULT ENCRYPTION='N' */;
 USE `conectalento`;
--- MySQL dump 10.13  Distrib 8.0.36, for Win64 (x86_64)
+-- MySQL dump 10.13  Distrib 8.0.42, for Win64 (x86_64)
 --
 -- Host: localhost    Database: conectalento
 -- ------------------------------------------------------
--- Server version	8.0.36
+-- Server version	8.0.42
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -16,6 +16,31 @@ USE `conectalento`;
 /*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
 /*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
+
+--
+-- Table structure for table `code_validacao`
+--
+
+DROP TABLE IF EXISTS `code_validacao`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `code_validacao` (
+  `code` char(6) NOT NULL,
+  `code_expira_em` datetime DEFAULT NULL,
+  `email` varchar(45) DEFAULT NULL,
+  PRIMARY KEY (`code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `code_validacao`
+--
+
+LOCK TABLES `code_validacao` WRITE;
+/*!40000 ALTER TABLE `code_validacao` DISABLE KEYS */;
+INSERT INTO `code_validacao` VALUES ('AQaqf7','2025-08-27 00:59:02','rhuan08.lima@gmail.com'),('cQaZxT','2025-08-27 00:58:17','rhuan08.lima@gmail.com'),('dK3ajt','2025-08-27 01:05:42','rhuan08.lima@gmail.com'),('eMvQKJ','2025-08-27 00:58:29','rhuan08.lima@gmail.com'),('FwmoxW','2025-08-27 00:19:14','rhuan.lima.cmd@gmail.com'),('L7PVk5','2025-08-27 00:43:30','rhuan08.lima@gmail.com'),('pukncw','2025-08-27 00:33:33','rhuan08.lima@gmail.com'),('qCU94R','2025-08-27 00:42:16','rhuan08.lima@gmail.com'),('qiKos9','2025-08-27 01:21:56','rhuan09.lima@gmail.com'),('s6YjZx','2025-08-27 00:58:53','rhuan08.lima@gmail.com'),('T97pDa','2025-08-27 00:26:58','rhuan08.lima@gmail.com'),('yLhZSi','2025-08-27 01:21:49','rhuan09.lima@gmail.com'),('yyXYEy','2025-08-27 00:28:20','rhuan08.lima@gmail.com');
+/*!40000 ALTER TABLE `code_validacao` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `extrainfo`
@@ -108,7 +133,6 @@ DROP TABLE IF EXISTS `usuario`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `usuario` (
   `id_usuario` int NOT NULL AUTO_INCREMENT,
-  `cpf` char(11) NOT NULL,
   `email` varchar(255) NOT NULL,
   `senha` varchar(255) NOT NULL,
   `biografia` varchar(255) DEFAULT NULL,
@@ -116,9 +140,8 @@ CREATE TABLE `usuario` (
   `plano` varchar(45) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL,
   PRIMARY KEY (`id_usuario`),
   UNIQUE KEY `id_usuario_UNIQUE` (`id_usuario`),
-  UNIQUE KEY `cpf_UNIQUE` (`cpf`),
   UNIQUE KEY `email_UNIQUE` (`email`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -127,7 +150,7 @@ CREATE TABLE `usuario` (
 
 LOCK TABLES `usuario` WRITE;
 /*!40000 ALTER TABLE `usuario` DISABLE KEYS */;
-INSERT INTO `usuario` VALUES (1,'12345678901','usuario@exemplo.com','senha123','Amo programar!','usuario123','Premium');
+INSERT INTO `usuario` VALUES (1,'usuario@exemplo.com','senha123','Amo programar!','usuario123','Premium'),(3,'rhuan.lima.cmd@gmail.com','$2b$10$zFlmLS0CWpWPZPOjsR8MJuFVpK00/oKkc4ziJJm3OUz6ZOX.WNyba',NULL,'rhuan',NULL),(8,'rhuan08.lima@gmail.com','$2b$10$V3fT3kJtx/PaQpOTM5zMw.Tf1MBmd76WU1PnsWhuZDgqKfx/Hoeaa',NULL,'rhuan',NULL),(10,'rhuan09.lima@gmail.com','$2b$10$h7s3uZeUgXzzrK3i0K6U2OWhtdhbSLFI0AddTv/hcN4nqYGxkFloy',NULL,'rhuan',NULL);
 /*!40000 ALTER TABLE `usuario` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -148,4 +171,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-08-13 10:07:49
+-- Dump completed on 2025-08-27  1:26:27

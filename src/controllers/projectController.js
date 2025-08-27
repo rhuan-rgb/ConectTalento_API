@@ -1,5 +1,134 @@
-const connect = require("../db/connect");
 
-module.exports = class projectController{
-    
-}
+const connect = require("../db/connect"); // Ajuste o caminho da sua conexão
+
+module.exports = class projectController {
+  // CREATE
+  static async createProject(req, res) {
+    const { id_usuario, titulo, descricao } = req.body;
+
+    if (!id_usuario || !titulo || !descricao) {
+      return res
+        .status(400)
+        .json({ error: "Todos os campos devem ser preenchidos" });
+    }
+
+    try {
+      const query = `INSERT INTO projeto (id_usuario, titulo, descricao) VALUES (?, ?, ?)`;
+      connect.query(query, [id_usuario, titulo, descricao], (err, result) => {
+        if (err) {
+          console.error(err);
+          return res.status(500).json({ error: "Erro ao criar projeto" });
+        }
+
+        return res.status(201).json({
+          message: "Projeto criado com sucesso",
+          projetoId: result.insertId,
+        });
+      });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ error: "Erro no servidor" });
+    }
+  }
+
+  // READ ALL
+  static async getAllProjects(req, res) {
+    try {
+      const query = `SELECT * FROM projeto`;
+      connect.query(query, (err, results) => {
+        if (err) {
+          console.error(err);
+          return res.status(500).json({ error: "Erro ao buscar projetos" });
+        }
+
+        return res.status(200).json(results);
+      });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ error: "Erro no servidor" });
+    }
+  }
+
+  // READ ONE
+  static async getProjectByIdUser(req, res) {
+    const { id_usuario } = req.params;
+
+    if (!id_usuario) return res.status(400).json({ error: "ID é obrigatório" });
+
+    try {
+      const query = `SELECT * FROM projeto WHERE id_usuario = ?`;
+      connect.query(query, [id_usuario], (err, results) => {
+        if (err) {
+          console.error(err);
+          return res.status(500).json({ error: "Erro ao buscar projeto" });
+        }
+
+        if (results.length === 0) {
+          return res.status(404).json({ error: "Projeto não encontrado" });
+        }
+
+        return res.status(200).json(results[0]);
+      });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ error: "Erro no servidor" });
+    }
+  }
+
+  // UPDATE
+  static async updateProject(req, res) {
+    const { id_projeto} = req.params;
+    const { titulo, descricao } = req.body;
+
+    if (!id_projeto || !titulo || !descricao) {
+      return res
+        .status(400)
+        .json({ error: "ID, título e descrição são obrigatórios" });
+    }
+
+    try {
+      const query = `UPDATE projeto SET titulo = ?, descricao = ? WHERE id_projeto = ?`;
+      connect.query(query, [titulo, descricao, id_projeto], (err, result) => {
+        if (err) {
+          console.error(err);
+          return res.status(500).json({ error: "Erro ao atualizar projeto" });
+        }
+
+        if (result.affectedRows === 0) {
+          return res.status(404).json({ error: "Projeto não encontrado" });
+        }
+
+        return res.status(200).json({ message: "Projeto atualizado com sucesso" });
+      });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ error: "Erro no servidor" });
+    }
+  }
+
+  // DELETE
+  static async deleteProject(req, res) {
+    const { id_projeto } = req.params;
+
+    if (!id_projeto) return res.status(400).json({ error: "ID é obrigatório" });
+
+    try {
+      const query = `DELETE FROM projeto WHERE id_projeto = ?`;
+      connect.query(query, [id_projeto], (err, result) => {
+        if (err) {
+          console.error(err);
+          return res.status(500).json({ error: "Erro ao deletar projeto" });
+        }
+
+        if (result.affectedRows === 0) {
+          return res.status(404).json({ error: "Projeto não encontrado" });
+        }
+
+        return res.status(200).json({ message: "Projeto deletado com sucesso" });
+      });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ error: "Erro no servidor" });
+    }
+  }
+};
