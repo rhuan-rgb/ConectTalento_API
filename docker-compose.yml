@@ -8,15 +8,17 @@ services:
     volumes: 
       - .:/usr/app
     depends_on:
-      - root
+      - db
   db:
     image: mysql:8.0
     restart: always
     environment:
       MYSQL_ROOT_PASSWORD: 190991
       MYSQL_DATABASE: conectalento
+      MYSQL_USER: alunods
+      MYSQL_PASSWORD: senai@604
     ports:
-     - "3307:3307"
+     - "3307:3306"
     volumes: 
       - db_data:/var/lib/mysql
       - ./mysql-init:/docker-entrypoint-initdb.d

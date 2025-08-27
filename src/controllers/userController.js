@@ -3,7 +3,6 @@ const jwt = require("jsonwebtoken");
 const validateUser = require("../services/validateUser");
 const bcrypt = require("bcrypt");
 
-
 module.exports = class userController {
   static async createUser(req, res) {
     const { email, password, confirmPassword, username, code } = req.body;
@@ -24,9 +23,7 @@ module.exports = class userController {
       return res.status(400).json({ error: "Email inválido" });
     }
 
-
     if (code == "") {
-
       const emailExistente = await validateUser.checkIfEmailExists(email);
 
       if (emailExistente) {
@@ -34,60 +31,99 @@ module.exports = class userController {
       }
 
       const generatedCode = await validateUser.validateEmail(email);
-      
+
       if (generatedCode) {
-        return res.status(202).json({ message: "Email enviado", registered: false });
+        return res
+          .status(202)
+          .json({ message: "Email enviado", registered: false });
       }
     } else {
-
       const codeOk = await validateUser.validateCode(email, code);
 
       if (codeOk === true) {
         try {
           const hashedPassword = await validateUser.hashPassword(password);
           const query = `INSERT INTO usuario (email, senha, username) VALUES (?, ?, ?)`;
-          connect.query(query, [email, hashedPassword, username], (err) => {
-            if (err) {
-              if (err.code === "ER_DUP_ENTRY") {
-                if (err.message.includes("email")) {
-                  return res.status(400).json({ error: "Email já cadastrado" });
+
+          connect.query(
+            query,
+            [email, hashedPassword, username],
+            (err, results) => {
+              if (err) {
+                if (err.code === "ER_DUP_ENTRY") {
+                  if (err.message.includes("email")) {
+                    return res
+                      .status(400)
+                      .json({ error: "Email já cadastrado" });
+                  }
+                } else {
+                  return res
+                    .status(500)
+                    .json({ error: "Erro interno do servidor", err });
                 }
-              } else {
-                return res
-                  .status(500)
-                  .json({ error: "Erro interno do servidor", err });
               }
+
+              // Buscar o usuário recém criado para gerar o token
+              const selectQuery = `SELECT * FROM usuario WHERE email = ?`;
+              connect.query(selectQuery, [email], (err, results) => {
+                if (err) {
+                  console.log(err);
+                  return res
+                    .status(500)
+                    .json({ error: "Erro Interno do Servidor" });
+                }
+
+                if (results.length === 0) {
+                  return res
+                    .status(404)
+                    .json({ error: "Usuário não encontrado" });
+                }
+
+                const user = results[0];
+
+                // Gerar token JWT
+                const token = jwt.sign(
+                  { id_usuario: user.id_usuario }, // payload
+                  process.env.SECRET, // chave secreta
+                  { expiresIn: "1h" } // tempo de expiração
+                );
+
+                // Remover a senha do objeto antes de enviar
+                delete user.senha;
+
+                return res.status(201).json({
+                  message: "Usuário criado com sucesso",
+                  registered: true,
+                  user,
+                  token,
+                });
+              });
             }
-            return res.status(201).json({ message: "Usuário criado com sucesso", registered: true });
-          });
+          );
         } catch (error) {
           return res.status(500).json({ error });
         }
       } else if (codeOk === "expirado") {
-        return res.status(400).json({ message: "Código expirado. Tente cadastrar-se novamente", registered: false });
+        return res.status(400).json({
+          message: "Código expirado. Tente cadastrar-se novamente",
+          registered: false,
+        });
+      } else {
+        return res
+          .status(400)
+          .json({ message: "Código inválido", registered: false });
       }
-
-      else {
-        return res.status(400).json({ message: "Código inválido", registered: false });
-      }
-
     }
-
-
-
-
-
   }
+
   static async loginUser(req, res) {
     const { email, password } = req.body;
-
 
     if (!email || !password) {
       return res
         .status(400)
         .json({ error: "O Email e a Senha são obrigatórios para o login!" });
     }
-
 
     const query = `SELECT * FROM usuario WHERE email = ?`;
 
@@ -107,7 +143,10 @@ module.exports = class userController {
 
         // Verificar se a senha corresponde
 
-        const senhaValida = await validateUser.comparePassword(password, user.senha);
+        const senhaValida = await validateUser.comparePassword(
+          password,
+          user.senha
+        );
         if (!senhaValida) {
           return res.status(403).json({ error: "Senha Incorreta" });
         }
