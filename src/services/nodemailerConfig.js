@@ -18,56 +18,70 @@ function generateCode(userEmail) {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
   let code = "";
   for (let i = 0; i < 6; i++) {
-    const idx = crypto.randomInt(0, chars.length); // índice aleatório
+    const idx = crypto.randomInt(0, chars.length);
     code += chars[idx];
   }
-  // checa se este código já está vinculado a outro usuário
-  const query = `INSERT INTO code_validacao (code, code_expira_em, email) VALUES (?, NOW() + INTERVAL 10 MINUTE, ?);`;
-  try {
-    connect.query(query, [code, userEmail], (err) => {
-      if (err === "ER_DUP_ENTRY") {
-        return false;
-      } else if (err) {
-        console.log("erro ao inserir o código gerado no usuário", err);
-        return "dont_repeat";
-      } else {
-        return code;
-      }
-    })
-  } catch (error) {
-    console.log(error);
-  }
 
+  const query = `
+    INSERT INTO code_validacao (code, code_expira_em, email)
+    VALUES (?, NOW() + INTERVAL 10 MINUTE, ?);
+  `;
+
+  return new Promise((resolve, reject) => {
+    connect.query(query, [code, userEmail], (err) => {
+      if (err) {
+        if (err.code === "ER_DUP_ENTRY") {
+          resolve(false); // código duplicado → tente outro
+        } else {
+          console.error("Erro ao inserir código:", err);
+          resolve("dont_repeat"); // erro inesperado → sair do loop
+        }
+      } else {
+        resolve(code); // deu certo, retornamos o código
+      }
+    });
+  });
 }
 
-// Wrap in an async IIFE so we can use await.
+
 const sendMail = async (userEmail) => {
   try {
-    let code = false;
-    while (true) {
-      code = generateCode(userEmail);
-      if (code === "dont_repeat") {
-        break
+    let code = null;
+    let attempts = 0; // limitar tentativas
+    const maxAttempts = 10;
+
+    while (!code && attempts < maxAttempts) {
+      const result = await generateCode(userEmail);
+
+      if (result === "dont_repeat") {
+        throw new Error("Erro inesperado ao gerar código");
       }
-      if (code === true) {
-        break
+
+      if (result) {
+        code = result; // código válido gerado
       }
+
+      attempts++;
     }
 
+    if (!code) {
+      throw new Error("Não foi possível gerar um código único após várias tentativas");
+    }
 
     const info = await transporter.sendMail({
       from: `ConectTalento <${process.env.nodemailer_user}>`,
       to: userEmail,
       subject: "Seu código de verificação",
-      text: `Aqui está seu código, copie e cole no site: ${code}`, // plain‑text body
-      // html: html_, // HTML body
+      text: `Aqui está seu código, copie e cole no site: ${code}`,
     });
+
+    console.log(info);
     return code;
-
-
   } catch (err) {
-    return ("mensagem não enviada", err);
+    console.error("mensagem não enviada:", err);
+    return null;
   }
 };
+
 
 module.exports = sendMail;

@@ -21,15 +21,17 @@ module.exports = class userController {
 
     
     if (code == "") {
-      const generatedCode = validateUser.validateEmail(email);
+      const generatedCode = await validateUser.validateEmail(email);
       if (generatedCode) {
+        console.log(generatedCode);
         return res.status(202).json({ message: "Email enviado", registered: false });
       }
     } else {
-      const codeOk = validateUser.validateCode(email, code);
+      const codeOk = await validateUser.validateCode(email, code);
+      console.log(codeOk);
       if (codeOk) {
         try {
-          const query = `INSERT INTO usuario (email, senha, username, code) VALUES (?, ?, ?, ?)`;
+          const query = `INSERT INTO usuario (email, senha, username) VALUES (?, ?, ?)`;
           connect.query(query, [email, password, username, code], (err) => {
             if (err) {
               console.log(err);

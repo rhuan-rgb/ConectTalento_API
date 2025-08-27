@@ -1,8 +1,8 @@
-const sendMail = require("./nodemailerConfig"); 
+const sendMail = require("./nodemailerConfig");
 const connect = require("../db/connect");
 
 const validateUser = {
-  
+
 
   validateDataEmail: function (email) {
     const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -12,35 +12,38 @@ const validateUser = {
     return false;
   },
 
-  validateEmail: function (email) {
+  validateEmail: async function (email) {
 
     //verificar se o email já existe no db
 
-    const code = sendMail(email);
-    if(code){
+    const code = await sendMail(email);
+    if (code) {
 
-      
+
       return code;
     } else {
       return false
     }
   },
 
-  validateCode: function (userEmail, code){ //criar index pro code no banco de dados
-    const query = `SELECT code FROM code_validacao WHERE email = ? and code = ?`;
-    connect.query(query, [userEmail, code], (err, results) =>{
-      if(err){
-        console.log(err);
-      } else {
-        if(results[0].code === code){
-          return true
-        } else {
-          return false
+  validateCode: function (userEmail, code) {
+    const query = `SELECT code FROM code_validacao WHERE email = ? AND code = ? LIMIT 1`;
+
+    return new Promise((resolve, reject) => {
+      connect.query(query, [userEmail, code], (err, results) => {
+        if (err) {
+          console.log(err);
+          return resolve(false);
         }
-        
-      }
-    })
+        if (results.length > 0 && results[0].code === code) {
+          resolve(true);
+        } else {
+          resolve(false);
+        }
+      });
+    });
   }
+
 };
 
 module.exports = validateUser;
