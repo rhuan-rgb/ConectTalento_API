@@ -5,7 +5,7 @@ const bcrypt = require("bcrypt");
 
 module.exports = class userController {
   static async createUser(req, res) {
-    const { email, password, confirmPassword, username, code } = req.body;
+    const { email, password, confirmPassword, username } = req.body;
 
     // Verifica se todos os campos obrigatórios foram preenchidos
     if (!email || !password || !confirmPassword || !username) {
@@ -21,97 +21,67 @@ module.exports = class userController {
 
     if (!validateUser.validateDataEmail) {
       return res.status(400).json({ error: "Email inválido" });
-    }
-
-    if (code == "") {
-      const emailExistente = await validateUser.checkIfEmailExists(email);
-
-      if (emailExistente) {
-        return res.status(400).json({ error: "Email já cadastrado" });
-      }
-
-      const generatedCode = await validateUser.validateEmail(email);
-
-      if (generatedCode) {
-        return res
-          .status(202)
-          .json({ message: "Email enviado", registered: false });
-      }
     } else {
-      const codeOk = await validateUser.validateCode(email, code);
 
-      if (codeOk === true) {
-        try {
-          const hashedPassword = await validateUser.hashPassword(password);
-          const query = `INSERT INTO usuario (email, senha, username) VALUES (?, ?, ?)`;
+      try {
+        const hashedPassword = await validateUser.hashPassword(password);
+        const query = `INSERT INTO usuario (email, senha, username, autenticado) VALUES (?, ?, ?, false)`;
 
-          connect.query(
-            query,
-            [email, hashedPassword, username],
-            (err, results) => {
-              if (err) {
-                if (err.code === "ER_DUP_ENTRY") {
-                  if (err.message.includes("email")) {
-                    return res
-                      .status(400)
-                      .json({ error: "Email já cadastrado" });
-                  }
-                } else {
-                  return res
-                    .status(500)
-                    .json({ error: "Erro interno do servidor", err });
+        connect.query(
+          query,
+          [email, hashedPassword, username],
+          (err, results) => {
+            if (err) {
+              if (err.code === "ER_DUP_ENTRY") {
+                if (err.message.includes("email")) {
+                  return res.status(400).json({ error: "Email já cadastrado" });
                 }
+              } else {
+                return res
+                  .status(500)
+                  .json({ error: "Erro interno do servidor", err });
+              }
+            }
+
+            // Buscar o usuário recém criado para gerar o token
+            const selectQuery = `SELECT * FROM usuario WHERE email = ?`;
+            connect.query(selectQuery, [email], (err, results) => {
+              if (err) {
+                console.log(err);
+                return res
+                  .status(500)
+                  .json({ error: "Erro Interno do Servidor" });
               }
 
-              // Buscar o usuário recém criado para gerar o token
-              const selectQuery = `SELECT * FROM usuario WHERE email = ?`;
-              connect.query(selectQuery, [email], (err, results) => {
-                if (err) {
-                  console.log(err);
-                  return res
-                    .status(500)
-                    .json({ error: "Erro Interno do Servidor" });
-                }
+              if (results.length === 0) {
+                return res
+                  .status(404)
+                  .json({ error: "Usuário não encontrado" });
+              }
 
-                if (results.length === 0) {
-                  return res
-                    .status(404)
-                    .json({ error: "Usuário não encontrado" });
-                }
+              const user = results[0];
 
-                const user = results[0];
+              // Gerar token JWT
+              const token = jwt.sign(
+                { id_usuario: user.id_usuario }, // payload
+                process.env.SECRET, // chave secreta
+                { expiresIn: "1h" } // tempo de expiração
+              );
 
-                // Gerar token JWT
-                const token = jwt.sign(
-                  { id_usuario: user.id_usuario }, // payload
-                  process.env.SECRET, // chave secreta
-                  { expiresIn: "1h" } // tempo de expiração
-                );
+              // Remover a senha do objeto antes de enviar
+              delete user.senha;
 
-                // Remover a senha do objeto antes de enviar
-                delete user.senha;
-
-                return res.status(201).json({
-                  message: "Usuário criado com sucesso",
-                  registered: true,
-                  user,
-                  token,
-                });
+              return res.status(201).json({
+                message: "Usuário criado com sucesso",
+                registered: false,
+                user,
+                token,
               });
-            }
-          );
-        } catch (error) {
-          return res.status(500).json({ error });
-        }
-      } else if (codeOk === "expirado") {
-        return res.status(400).json({
-          message: "Código expirado. Tente cadastrar-se novamente",
-          registered: false,
-        });
-      } else {
-        return res
-          .status(400)
-          .json({ message: "Código inválido", registered: false });
+            });
+          }
+        );
+      } catch (error) {
+        return res.status(500).json({ error });
       }
     }
   }
@@ -281,34 +251,53 @@ module.exports = class userController {
       return res.status(500).json({ error: "Erro Interno de Servidor" });
     }
   }
-  static async deleteUser(req, res) {
-    const userId = req.params.id; // Pega o ID do usuário da URL
 
-    if (!userId) {
-      return res.status(400).json({ error: "ID do usuário é necessário" });
+  static async generateCode(req, res) {
+    const [email] = req.body;
+
+    const emailExistente = await validateUser.checkIfEmailExists(email);
+
+    if (emailExistente) {
+      return res.status(400).json({ error: "Email já cadastrado" });
     }
 
-    const query = `DELETE FROM usuario WHERE id_usuario = ?`; // Garante que estamos buscando pelo 'id_usuario'
-    const values = [userId];
+    const generatedCode = await validateUser.validateEmail(email);
 
-    try {
-      connect.query(query, values, function (err, results) {
-        if (err) {
-          console.error(err);
-          return res.status(500).json({ error: "Erro Interno do Servidor" });
-        }
+    if (generatedCode) {
+      return res
+        .status(202)
+        .json({ message: "Email enviado", registered: false });
+    }
+  }
 
-        if (results.affectedRows === 0) {
-          return res.status(404).json({ error: "Usuário não encontrado." });
-        }
+  static async validateCode(req, res) {
+    const [email, code] = req.body;
 
-        return res
-          .status(200)
-          .json({ message: "Usuário excluído com sucesso." });
+    const codeOk = await validateUser.validateCode(email, code);
+
+    if (codeOk === true) {
+      try {
+        const query = `UPDATE usuario SET autenticado WHERE email = ?`;
+        connect.query(query, email, (err, results) => {
+          if (err) {
+            console.log("erro ao tornar o usuário como autenticado", err);
+          } else {
+            res.status(200).json({
+              message: "Código válido. Usuário autenticado.",
+              registered: true,
+            });
+          }
+        });
+      } catch (error) {}
+    } else if (codeOk === "expirado") {
+      return res.status(400).json({
+        message: "Código expirado. Tente cadastrar-se novamente",
+        registered: false,
       });
-    } catch (error) {
-      console.error("Erro ao executar a consulta:", error);
-      return res.status(500).json({ error: "Erro Interno de Servidor" });
+    } else {
+      return res
+        .status(400)
+        .json({ message: "Código inválido", registered: false });
     }
   }
 };

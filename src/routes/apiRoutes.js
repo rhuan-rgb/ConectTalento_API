@@ -10,7 +10,8 @@ router.put('/user', verifyJWT, userController.updateUser);
 router.delete('/user/:id', verifyJWT, userController.deleteUser);
 router.post('/login', userController.loginUser);
 router.get("/user", userController.getAllUsers);
-
+router.post("/user/validatecode", userController.validateCode);
+router.post("/user/generatecode", userController.generateCode);
 
 //Rotas projetoController
 router.post('/project', verifyJWT, projectController.createProject);
