@@ -25,7 +25,7 @@ const validateUser = {
 
   checkIfEmailExists: async function (email) {
     return new Promise((resolve, reject) => {
-      const query = "SELECT id_usuario FROM usuario WHERE email = ? LIMIT 1";
+      const query = "SELECT ID_user FROM usuario WHERE email = ? LIMIT 1";
       connect.query(query, [email], (err, results) => {
         if (err) {
           return reject(err);

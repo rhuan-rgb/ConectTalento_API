@@ -77,7 +77,7 @@ const sendMail = async (userEmail) => {
 
     return code;
   } catch (err) {
-    console.error("mensagem não enviada:", err);
+    console.error(userEmail, "mensagem não enviada:", err);
     return null;
   }
 };

@@ -23,9 +23,11 @@ module.exports = class userController {
       return res.status(400).json({ error: "Email inválido" });
     } else {
 
+      const emailExistente = await validateUser.checkIfEmailExists(email);
+
       try {
         const hashedPassword = await validateUser.hashPassword(password);
-        const query = `INSERT INTO usuario (email, senha, username, autenticado) VALUES (?, ?, ?, false)`;
+        const query = `INSERT INTO usuario (email, senha, username, autenticado, criado_em, plano) VALUES (?, ?, ?, false, NOW(), false)`;
 
         connect.query(
           query,
@@ -63,7 +65,7 @@ module.exports = class userController {
 
               // Gerar token JWT
               const token = jwt.sign(
-                { id_usuario: user.id_usuario }, // payload
+                { ID_user: user.ID_user }, // payload
                 process.env.SECRET, // chave secreta
                 { expiresIn: "1h" } // tempo de expiração
               );
@@ -123,7 +125,7 @@ module.exports = class userController {
 
         // Gerar o token de autenticação
         const token = jwt.sign(
-          { id_usuario: user.id_usuario }, // Usar id_usuario no payload do token
+          { ID_user: user.ID_user }, // Usar ID_user no payload do token
           process.env.SECRET, // Chave secreta do ambiente
           { expiresIn: "1h" } // Expiração do token
         );
@@ -145,7 +147,7 @@ module.exports = class userController {
   }
 
   static async getAllUsers(req, res) {
-    const query = `SELECT id_usuario, email, username, biografia, plano FROM usuario`;
+    const query = `SELECT ID_user, email, username, biografia, plano FROM usuario`;
 
     try {
       connect.query(query, function (err, results) {
@@ -169,7 +171,7 @@ module.exports = class userController {
       email,
       password,
       confirmPassword,
-      id_usuario,
+      ID_user,
       biografia,
       username,
       plano,
@@ -186,14 +188,14 @@ module.exports = class userController {
       return res.status(400).json(validationError);
     }
 
-    const query = `UPDATE usuario SET username=?, email=?, senha=?, biografia=?, plano=? WHERE id_usuario = ?`;
+    const query = `UPDATE usuario SET username=?, email=?, senha=?, biografia=?, plano=? WHERE ID_user = ?`;
     const values = [
       username,
       email,
       password, // Senha já confirmada
       biografia,
       plano,
-      id_usuario,
+      ID_user,
     ];
 
     try {
@@ -228,7 +230,7 @@ module.exports = class userController {
       return res.status(400).json({ error: "ID do usuário é necessário" });
     }
 
-    const query = `DELETE FROM usuario WHERE id_usuario = ?`; // Garante que estamos buscando pelo 'id_usuario'
+    const query = `DELETE FROM usuario WHERE ID_user = ?`; // Garante que estamos buscando pelo 'ID_user'
     const values = [userId];
 
     try {
@@ -253,9 +255,11 @@ module.exports = class userController {
   }
 
   static async generateCode(req, res) {
-    const [email] = req.body;
+    const email = req.body.email;
+    console.log(req.body);
+    console.log(email);
 
-    const emailExistente = await validateUser.checkIfEmailExists(email);
+    
 
     if (emailExistente) {
       return res.status(400).json({ error: "Email já cadastrado" });
@@ -271,7 +275,7 @@ module.exports = class userController {
   }
 
   static async validateCode(req, res) {
-    const [email, code] = req.body;
+    const {email, code} = req.body;
 
     const codeOk = await validateUser.validateCode(email, code);
 
