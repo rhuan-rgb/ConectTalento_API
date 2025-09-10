@@ -19,11 +19,15 @@ module.exports = class userController {
       return res.status(400).json({ error: "As senhas não coincidem" });
     }
 
-    if (!validateUser.validateDataEmail) {
+    if (!validateUser.validateDataEmail(email)) {
       return res.status(400).json({ error: "Email inválido" });
     } else {
 
       const emailExistente = await validateUser.checkIfEmailExists(email);
+
+      if (emailExistente) {
+        return res.status(400).json({ error: "Email já cadastrado" });
+      }
 
       try {
         const hashedPassword = await validateUser.hashPassword(password);
@@ -261,9 +265,7 @@ module.exports = class userController {
 
     
 
-    if (emailExistente) {
-      return res.status(400).json({ error: "Email já cadastrado" });
-    }
+    
 
     const generatedCode = await validateUser.validateEmail(email);
 

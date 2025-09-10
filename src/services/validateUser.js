@@ -25,7 +25,7 @@ const validateUser = {
 
   checkIfEmailExists: async function (email) {
     return new Promise((resolve, reject) => {
-      const query = "SELECT ID_user FROM usuario WHERE email = ? LIMIT 1";
+      const query = "SELECT ID_user FROM usuario WHERE email = ? AND autenticado = true LIMIT 1";
       connect.query(query, [email], (err, results) => {
         if (err) {
           return reject(err);
@@ -37,9 +37,22 @@ const validateUser = {
 
 
   validateCode: function (userEmail, code) {
+
+    connect.query(querySelect, [userEmail], (err, results) => {
+      if (err) {
+        console.log("erro ao pegar o id do usuario pelo email: ", err);
+        return reject(err);
+      }
+
+      if (results.length === 0) {
+        return reject(new Error("Usuário não encontrado"));
+      }
+
+      const id = results[0].ID_user; // pega o id corretamente
+    })
     const query = `SELECT code, code_expira_em 
                  FROM code_validacao 
-                 WHERE email = ? AND code = ? 
+                 WHERE ID_user = ? AND code = ? 
                  LIMIT 1`;
 
     return new Promise((resolve, reject) => {
