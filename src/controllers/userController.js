@@ -50,16 +50,6 @@ module.exports = class userController {
 
         // envia código
         const generatedCode = await validateUser.sendCodeToEmail(email);
-        if (!generatedCode) {
-          // rollback simples para não “travar” o e-mail único
-          connect.query(
-            "DELETE FROM usuario WHERE email = ? AND autenticado = false",
-            [email],
-            () => { }
-          );
-          return res.status(500).json({ error: "Não foi possível enviar o código. Tente novamente." });
-        }
-
         return res.status(201).json({
           message: "Código enviado ao e-mail.",
         });
