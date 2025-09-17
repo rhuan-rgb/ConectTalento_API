@@ -10,7 +10,9 @@ router.post('/login', userController.loginUser);
 router.put('/user', userController.updateUser); // refatorar
 router.delete('/user/:id', userController.deleteUser); // refatorar
 router.get("/user", userController.getAllUsers);
+
 router.get("/user/:user", userController.getUserByName);
+
 
 
 //Rotas projetoController

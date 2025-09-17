@@ -4,6 +4,7 @@ const validateUser = require("../services/validateUser");
 
 module.exports = class userController {
   static async createUser(req, res) {
+    
     const { email, password, confirmPassword, username, name, code } = req.body;
 
     // ===== Verificações simples =====
@@ -13,6 +14,7 @@ module.exports = class userController {
     if (password !== confirmPassword) {
       return res.status(400).json({ error: "As senhas não coincidem" });
     }
+
     if (!validateUser.validateDataEmail(email)) {
       return res.status(400).json({ error: "Email inválido" });
     } 
@@ -46,7 +48,10 @@ module.exports = class userController {
             connect.query(qUpdate, [user.ID_user], (err2) => {
               if (err2) {
                 return res.status(500).json({ message: "Erro ao autenticar usuário.", err: err2 });
+
               }
+            }
+
 
               // gera JWT
               const token = jwt.sign({ ID_user: user.ID_user }, process.env.SECRET, { expiresIn: "1h" });
@@ -165,7 +170,9 @@ module.exports = class userController {
   }
 
   static async getAllUsers(req, res) {
+
     const query = `SELECT ID_user, email, autenticado, biografia, plano, username FROM usuario`;
+
 
     try {
       connect.query(query, function (err, results) {
@@ -238,7 +245,9 @@ module.exports = class userController {
   }
 
   static async updateUser(req, res) {
+
     const { ID_user, email, biografia, password, confirmPassword, username } = req.body;
+
 
     // Verifica se as senhas coincidem
     if (password !== confirmPassword) {
@@ -248,7 +257,9 @@ module.exports = class userController {
       return res.status(400).json({ error: "Todos os campos são obrigatórios." });
     }
 
+
     const query = `UPDATE usuario SET username=?, email=?, senha=?, biografia=? WHERE ID_user = ?`;
+
     const values = [
       username,
       email,
@@ -312,5 +323,4 @@ module.exports = class userController {
       return res.status(500).json({ error: "Erro Interno de Servidor" });
     }
   }
-
 };
