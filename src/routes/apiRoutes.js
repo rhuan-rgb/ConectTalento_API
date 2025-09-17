@@ -11,7 +11,9 @@ router.put('/user/:id', verifyJWT, userController.updateUser);
 router.put("/user/newpassword/:id", verifyJWT, userController.updatePassword);
 router.delete('/user/:id',verifyJWT, userController.deleteUser); 
 router.get("/user", userController.getAllUsers);
+
 router.get("/user/:user", userController.getUserByName);
+
 
 
 //Rotas projetoController

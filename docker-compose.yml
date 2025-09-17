@@ -15,10 +15,8 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: 190991
       MYSQL_DATABASE: conectalento
-      MYSQL_USER: alunods
-      MYSQL_PASSWORD: senai@604
     ports:
-     - "3307:3306"
+     - "3307:3307"
     volumes: 
       - db_data:/var/lib/mysql
       - ./mysql-init:/docker-entrypoint-initdb.d

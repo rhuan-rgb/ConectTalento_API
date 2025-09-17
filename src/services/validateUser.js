@@ -34,7 +34,9 @@ const validateUser = {
     });
   },
 
+
   checkIfEmailExiste: async function (email) {
+
     return new Promise((resolve, reject) => {
       const query = "SELECT ID_user FROM usuario WHERE email = ? AND autenticado IS NOT TRUE LIMIT 1";
       connect.query(query, [email], (err, results) => {

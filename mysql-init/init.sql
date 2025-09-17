@@ -1,3 +1,4 @@
+
 CREATE DATABASE IF NOT EXISTS conectalento
   DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE conectalento;
@@ -185,6 +186,7 @@ CREATE TRIGGER trg_usuario_log_extrainfo_cascade
 BEFORE DELETE ON `usuario`
 FOR EACH ROW
 BEGIN
+
   INSERT INTO `extrainfo_log` (
     `ID_extrainfo`, `link_insta`, `link_facebook`, `link_github`,
     `link_pinterest`, `numero_telefone`, `data_deletado`
@@ -193,6 +195,7 @@ BEGIN
          e.`link_pinterest`, e.`numero_telefone`, NOW()
   FROM `extrainfo` AS e
   WHERE e.`ID_user` = OLD.`ID_user`;
+
 END//
 
 -- Loga PROJETOS que serão apagados em cascata
@@ -234,10 +237,12 @@ STARTS CURRENT_TIMESTAMP + INTERVAL 1 MINUTE
 ON COMPLETION PRESERVE
 DO
 BEGIN
+
   INSERT INTO `code_validacao_log` (`code`, `code_expira_em`, `data_deletado`)
   SELECT `code`, `code_expira_em`, NOW()
   FROM `code_validacao`
   WHERE `code_expira_em` <= NOW();
+
 
   DELETE FROM `code_validacao`
   WHERE `code_expira_em` <= NOW();
