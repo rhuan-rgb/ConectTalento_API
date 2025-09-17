@@ -4,10 +4,10 @@ const validateUser = require("../services/validateUser");
 
 module.exports = class userController {
   static async createUser(req, res) {
-    const { email, password, confirmPassword, username } = req.body;
+    const { email, password, confirmPassword, username, name, code } = req.body;
 
-    // ===== 1) Verificações simples =====
-    if (!email || !password || !confirmPassword || !username) {
+    // ===== Verificações simples =====
+    if (!email || !password || !confirmPassword || !username || !name) {
       return res.status(400).json({ error: "Todos os campos são obrigatórios." });
     }
     if (password !== confirmPassword) {
@@ -15,57 +15,97 @@ module.exports = class userController {
     }
     if (!validateUser.validateDataEmail(email)) {
       return res.status(400).json({ error: "Email inválido" });
+    } 
+    if (await validateUser.checkIfEmailCadastrado(email)) {
+      return res.status(400).json({ error: "Email já cadastrado" });
+    }     
+    if (await validateUser.validateUserName(username)) {
+      return res.status(400).json({ error: "Usuário já com esse username" });
     }
 
-    try {
-      // Já existe usuário autenticado?
-      const emailCadastrado = await validateUser.checkIfEmailCadastrado(email);
-      if (emailCadastrado) {
-        return res.status(400).json({ error: "Email já cadastrado" });
-      }
 
-      // ===== 2) Existe pré-cadastro (não autenticado)? =====
-      const emailExiste = await validateUser.checkIfEmailExiste(email);
+    if (code) {
+      const codeOk = await validateUser.validateCode(email, code); // valida se o codigo é valido ou não
 
-      if (emailExiste) {
-        const generatedCode = await validateUser.sendCodeToEmail(email);
-        if (!generatedCode) {
-          return res.status(500).json({ error: "Falha ao enviar o código. Tente novamente." });
+      if (codeOk === true) {
+        try {
+          // pega o usuário para ter o ID_user e montar o token
+          const qSelectUser = "SELECT ID_user, email, username, name, plano, criado_em FROM usuario WHERE email = ? LIMIT 1";
+          connect.query(qSelectUser, [email], (err, rows) => {
+            if (err) {
+              return res.status(500).json({ message: "Erro ao buscar usuário.", err });
+            }
+            if (!rows.length) {
+              return res.status(404).json({ message: "Usuário não encontrado." });
+            }
+
+            const user = rows[0];
+
+            // autentica o usuário
+            const qUpdate = "UPDATE usuario SET autenticado = true WHERE ID_user = ? LIMIT 1";
+            connect.query(qUpdate, [user.ID_user], (err2) => {
+              if (err2) {
+                return res.status(500).json({ message: "Erro ao autenticar usuário.", err: err2 });
+              }
+
+              // gera JWT
+              const token = jwt.sign({ ID_user: user.ID_user }, process.env.SECRET, { expiresIn: "1h" });
+
+              return res.status(200).json({
+                message: "Código válido. Usuário autenticado.",
+                user: { ...user, autenticado: true }, // não retorna senha
+                token,
+              });
+            });
+          });
+        } catch (error) {
+          return res.status(500).json({ message: "Erro interno do servidor.", error });
         }
-
-        return res.status(202).json({
-          message: "Código reenviado ao e-mail.",
+      } else if (codeOk === "expirado") {
+        return res.status(400).json({
+          message: "Código expirado. Tente cadastrar-se novamente.",
         });
+      } else {
+        return res.status(400).json({ message: "Código inválido." });
       }
+    } else {
+      try {
+        // ===== 1) Existe pré-cadastro (não autenticado) =====
+        const userExiste = await validateUser.checkIfEmailExiste(email);
 
-      // ===== 3) Não existe → cria pré-cadastro (autenticado=false) =====
-      const hashedPassword = await validateUser.hashPassword(password);
-      const insertSql =
-        "INSERT INTO usuario (email, senha, username, autenticado, criado_em, plano) VALUES (?, ?, ?, false, NOW(), false)";
+        if (userExiste) {
+          const ID_user = userExiste[0].ID_user;
+          const generatedCode = await validateUser.sendCodeToEmail(email, ID_user);
+          if (!generatedCode) {
+            return res.status(500).json({ error: "Falha ao enviar o código. Tente novamente." });
+          }
 
-      connect.query(insertSql, [email, hashedPassword, username], async (err) => {
-        if (err) {
-          return res.status(500).json({ error: "Erro interno do servidor", err });
+          return res.status(202).json({
+            message: "Código reenviado ao e-mail.",
+          });
         }
 
-        // envia código
-        const generatedCode = await validateUser.sendCodeToEmail(email);
-        if (!generatedCode) {
-          // rollback simples para não “travar” o e-mail único
-          connect.query(
-            "DELETE FROM usuario WHERE email = ? AND autenticado = false",
-            [email],
-            () => { }
-          );
-          return res.status(500).json({ error: "Não foi possível enviar o código. Tente novamente." });
-        }
+        // ===== 2) Não existe → cria pré-cadastro (autenticado=false) =====
+        const hashedPassword = await validateUser.hashPassword(password);
+        const insertSql =
+          "INSERT INTO usuario (email, senha, username, name, autenticado, criado_em, plano) VALUES (?, ?, ?, ?, false, NOW(), false)";
 
-        return res.status(201).json({
-          message: "Código enviado ao e-mail.",
+        connect.query(insertSql, [email, hashedPassword, username, name], async (err, result) => {
+          if (err) {
+            return res.status(500).json({ error: "Erro interno do servidor", err });
+          }
+
+          const ID_user = result.insertId;
+          const generatedCode = await validateUser.sendCodeToEmail(email, ID_user);
+          if (!generatedCode) {
+            return res.status(500).json({ error: "Falha ao enviar o código. Tente novamente." });
+          }
+
+          return res.status(201).json({ message: "Código enviado ao e-mail." });
         });
-      });
-    } catch (error) {
-      return res.status(500).json({ error: "Erro interno do servidor", detail: error });
+      } catch (error) {
+        return res.status(500).json({ error: "Erro interno do servidor", detail: error });
+      }
     }
   }
 
@@ -273,55 +313,4 @@ module.exports = class userController {
     }
   }
 
-  static async validateCode(req, res) {
-    const { email, code } = req.body;
-
-    if (!email || !code) {
-      return res.status(400).json({ message: "Código é obrigatório" });
-    }
-
-    const codeOk = await validateUser.validateCode(email, code);
-
-    if (codeOk === true) {
-      try {
-        // pega o usuário para ter o ID_user e montar o token
-        const qSelectUser = "SELECT ID_user, email, username, plano, criado_em FROM usuario WHERE email = ? LIMIT 1";
-        connect.query(qSelectUser, [email], (err, rows) => {
-          if (err) {
-            return res.status(500).json({ message: "Erro ao buscar usuário.", err });
-          }
-          if (!rows.length) {
-            return res.status(404).json({ message: "Usuário não encontrado." });
-          }
-
-          const user = rows[0];
-
-          // autentica o usuário
-          const qUpdate = "UPDATE usuario SET autenticado = true WHERE ID_user = ? LIMIT 1";
-          connect.query(qUpdate, [user.ID_user], (err2) => {
-            if (err2) {
-              return res.status(500).json({ message: "Erro ao autenticar usuário.", err: err2 });
-            }
-
-            // gera JWT
-            const token = jwt.sign({ ID_user: user.ID_user }, process.env.SECRET, { expiresIn: "1h" });
-
-            return res.status(200).json({
-              message: "Código válido. Usuário autenticado.",
-              user: { ...user, autenticado: true }, // não retorna senha
-              token,
-            });
-          });
-        });
-      } catch (error) {
-        return res.status(500).json({ message: "Erro interno do servidor.", error });
-      }
-    } else if (codeOk === "expirado") {
-      return res.status(400).json({
-        message: "Código expirado. Tente cadastrar-se novamente.",
-      });
-    } else {
-      return res.status(400).json({ message: "Código inválido." });
-    }
-  }
 };

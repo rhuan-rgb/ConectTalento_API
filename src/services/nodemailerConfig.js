@@ -14,7 +14,7 @@ const transporter = nodemailer.createTransport({
 });
 
 //gera código de 6 dígitos para o cadastro
-function generateCode(userEmail) {
+function generateCode(ID_user) {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
   let code = "";
   for (let i = 0; i < 6; i++) {
@@ -23,12 +23,12 @@ function generateCode(userEmail) {
   }
 
   const query = `
-    INSERT INTO code_validacao (code, code_expira_em, email)
+    INSERT INTO code_validacao (code, code_expira_em, ID_user)
     VALUES (?, NOW() + INTERVAL 15 MINUTE, ?);
   `;
 
   return new Promise((resolve, reject) => {
-    connect.query(query, [code, userEmail], (err) => {
+    connect.query(query, [code, ID_user], (err) => {
       if (err) {
         if (err.code === "ER_DUP_ENTRY") {
           resolve(false); // código duplicado → tente outro
@@ -44,14 +44,14 @@ function generateCode(userEmail) {
 }
 
 
-const sendMail = async (userEmail) => {
+const sendMail = async (userEmail, ID_user) => {
   try {
     let code = null;
     let attempts = 0; // limitar tentativas
     const maxAttempts = 10;
 
     while (!code && attempts < maxAttempts) {
-      const result = await generateCode(userEmail);
+      const result = await generateCode(ID_user);
 
       if (result === "dont_repeat") {
         throw new Error("Erro inesperado ao gerar código");

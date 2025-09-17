@@ -12,6 +12,7 @@ CREATE TABLE `usuario` (
   `senha`       VARCHAR(255) NOT NULL,
   `plano`       BOOLEAN      NOT NULL,
   `username`    VARCHAR(50)  UNIQUE NOT NULL,
+  `name`        VARCHAR(255) NOT NULL,
   `criado_em`   DATETIME     NOT NULL,
   INDEX `ix_auth_criado` (`autenticado`,`criado_em`)
 ) ENGINE=InnoDB;
@@ -76,6 +77,7 @@ CREATE TABLE `user_log` (
   `senha`         VARCHAR(255) NOT NULL,
   `plano`         BOOLEAN      NOT NULL,
   `username`      VARCHAR(50)  NOT NULL,
+  `name`          VARCHAR(255) NOT NULL,
   `criado_em`     DATETIME     NOT NULL,
   `data_deletado` DATETIME     NOT NULL
 ) ENGINE=InnoDB;
@@ -119,9 +121,9 @@ AFTER DELETE ON `usuario`
 FOR EACH ROW
 BEGIN
   INSERT INTO `user_log` (
-    `ID_user`, `email`, `autenticado`, `imagem_user`, `biografia`, `senha`, `plano`, `username`, `criado_em`, `data_deletado`
+    `ID_user`, `email`, `autenticado`, `imagem_user`, `biografia`, `senha`, `plano`, `username`, `name`, `criado_em`, `data_deletado`
   ) VALUES (
-    OLD.`ID_user`, OLD.`email`, OLD.`autenticado`, OLD.`imagem_user`, OLD.`biografia`, OLD.`senha`, OLD.`plano`, OLD.`username`, OLD.`criado_em`,
+    OLD.`ID_user`, OLD.`email`, OLD.`autenticado`, OLD.`imagem_user`, OLD.`biografia`, OLD.`senha`, OLD.`plano`, OLD.`username`, OLD.`name`, OLD.`criado_em`,
     NOW()
   );
 END//

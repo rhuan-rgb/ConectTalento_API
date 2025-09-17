@@ -13,8 +13,8 @@ const validateUser = {
     return true;
   },
 
-  sendCodeToEmail: async function (email) {
-    const code = await sendMail(email);
+  sendCodeToEmail: async function (email, ID_user) {
+    const code = await sendMail(email, ID_user);
     if (code) {
       return code;
     } else {
@@ -41,11 +41,27 @@ const validateUser = {
         if (err) {
           return reject(err);
         }
-        resolve(results.length > 0); // true se já existe, false se não existe
+        if (results.length > 0) {
+          resolve(results)// true, passa o id se já existe,
+        } else {
+          resolve(false);  // false se não existe
+        }
+
       });
     });
   },
 
+  validateUserName: async function (username) {
+    return new Promise((resolve, reject) => {
+      const query = "SELECT 1 FROM usuario WHERE username = ? AND autenticado = true LIMIT 1";
+      connect.query(query, [username], (err, results) => {
+        if (err) {
+          return reject(err);
+        }
+        resolve(results.length > 0); // true se já existe, false se não existe
+      });
+    });
+  },
 
   validateCode: async function (userEmail, code) {
     // 1) descobrir o ID_user a partir do e-mail
