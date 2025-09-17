@@ -11,7 +11,7 @@ function verifyJWT(req, res, next){
         if(err){
             return res.status(403).json({auth:false, message: "Falha na autenticação do Token"})
         }
-        req.userId = decoded.id;
+        req.userId = decoded.ID_user;
         next();
     })
 

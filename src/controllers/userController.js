@@ -1,93 +1,143 @@
 const connect = require("../db/connect");
 const jwt = require("jsonwebtoken");
 const validateUser = require("../services/validateUser");
-const bcrypt = require("bcrypt");
 
 module.exports = class userController {
   static async createUser(req, res) {
-    const { email, password, confirmPassword, username } = req.body;
+    const { email, password, confirmPassword, username, name, code } = req.body;
 
-    // Verifica se todos os campos obrigatórios foram preenchidos
-    if (!email || !password || !confirmPassword || !username) {
+    // ===== Verificações simples =====
+    if (!email || !password || !confirmPassword || !username || !name) {
       return res
         .status(400)
         .json({ error: "Todos os campos são obrigatórios." });
     }
-
-    // Verifica se as senhas coincidem
     if (password !== confirmPassword) {
       return res.status(400).json({ error: "As senhas não coincidem" });
     }
-
     if (!validateUser.validateDataEmail(email)) {
       return res.status(400).json({ error: "Email inválido" });
-    } else {
+    }
+    if (await validateUser.checkIfEmailCadastrado(email)) {
+      return res.status(400).json({ error: "Email já cadastrado" });
+    }
+    if (await validateUser.validateUserName(username)) {
+      return res.status(400).json({ error: "Usuário já com esse username" });
+    }
 
-      const emailExistente = await validateUser.checkIfEmailExists(email);
+    if (code) {
+      const codeOk = await validateUser.validateCode(email, code); // valida se o codigo é valido ou não
 
-      if (emailExistente) {
-        return res.status(400).json({ error: "Email já cadastrado" });
-      }
-
-      try {
-        const hashedPassword = await validateUser.hashPassword(password);
-        const query = `INSERT INTO usuario (email, senha, username, autenticado, criado_em, plano) VALUES (?, ?, ?, false, NOW(), false)`;
-
-        connect.query(
-          query,
-          [email, hashedPassword, username],
-          (err, results) => {
+      if (codeOk === true) {
+        try {
+          // pega o usuário para ter o ID_user e montar o token
+          const qSelectUser =
+            "SELECT ID_user, email, username, name, plano, criado_em FROM usuario WHERE email = ? LIMIT 1";
+          connect.query(qSelectUser, [email], (err, rows) => {
             if (err) {
-              if (err.code === "ER_DUP_ENTRY") {
-                if (err.message.includes("email")) {
-                  return res.status(400).json({ error: "Email já cadastrado" });
-                }
-              } else {
-                return res
-                  .status(500)
-                  .json({ error: "Erro interno do servidor", err });
-              }
+              return res
+                .status(500)
+                .json({ error: "Erro ao buscar usuário.", err });
+            }
+            if (!rows.length) {
+              return res.status(404).json({ error: "Usuário não encontrado." });
             }
 
-            // Buscar o usuário recém criado para gerar o token
-            const selectQuery = `SELECT * FROM usuario WHERE email = ?`;
-            connect.query(selectQuery, [email], (err, results) => {
-              if (err) {
-                console.log(err);
+            const user = rows[0];
+
+            // autentica o usuário
+            const qUpdate =
+              "UPDATE usuario SET autenticado = true WHERE ID_user = ? LIMIT 1";
+            connect.query(qUpdate, [user.ID_user], (err2) => {
+              if (err2) {
                 return res
                   .status(500)
-                  .json({ error: "Erro Interno do Servidor" });
+                  .json({ error: "Erro ao autenticar usuário.", err: err2 });
               }
 
-              if (results.length === 0) {
-                return res
-                  .status(404)
-                  .json({ error: "Usuário não encontrado" });
-              }
-
-              const user = results[0];
-
-              // Gerar token JWT
+              // gera JWT
               const token = jwt.sign(
-                { ID_user: user.ID_user }, // payload
-                process.env.SECRET, // chave secreta
-                { expiresIn: "1h" } // tempo de expiração
+                { ID_user: user.ID_user },
+                process.env.SECRET,
+                { expiresIn: "1h" }
               );
 
-              // Remover a senha do objeto antes de enviar
-              delete user.senha;
-
-              return res.status(201).json({
-                message: "Usuário criado com sucesso",
-                registered: false,
-                user,
+              return res.status(200).json({
+                message: "Código válido. Usuário autenticado.",
+                user: { ...user, autenticado: true }, // não retorna senha
                 token,
               });
             });
+          });
+        } catch (error) {
+          return res
+            .status(500)
+            .json({ error: "Erro interno do servidor.", error });
+        }
+      } else if (codeOk === "expirado") {
+        return res.status(400).json({
+          error: "Código expirado. Tente cadastrar-se novamente.",
+        });
+      } else {
+        return res.status(400).json({ error: "Código inválido." });
+      }
+    } else {
+      try {
+        // ===== 1) Existe pré-cadastro (não autenticado) =====
+        const userExiste = await validateUser.checkIfEmailExiste(email);
+
+        if (userExiste) {
+          const ID_user = userExiste[0].ID_user;
+          const generatedCode = await validateUser.sendCodeToEmail(
+            email,
+            ID_user
+          );
+          if (!generatedCode) {
+            return res
+              .status(500)
+              .json({ error: "Falha ao enviar o código. Tente novamente." });
+          }
+
+          return res.status(202).json({
+            message: "Código reenviado ao e-mail.",
+          });
+        }
+
+        // ===== 2) Não existe → cria pré-cadastro (autenticado=false) =====
+        const hashedPassword = await validateUser.hashPassword(password);
+        const insertSql =
+          "INSERT INTO usuario (email, senha, username, name, autenticado, criado_em, plano) VALUES (?, ?, ?, ?, false, NOW(), false)";
+
+        connect.query(
+          insertSql,
+          [email, hashedPassword, username, name],
+          async (err, result) => {
+            if (err) {
+              return res
+                .status(500)
+                .json({ error: "Erro interno do servidor", err });
+            }
+
+            const ID_user = result.insertId;
+            const generatedCode = await validateUser.sendCodeToEmail(
+              email,
+              ID_user
+            );
+            if (!generatedCode) {
+              return res
+                .status(500)
+                .json({ error: "Falha ao enviar o código. Tente novamente." });
+            }
+
+            return res
+              .status(201)
+              .json({ message: "Código enviado ao e-mail." });
           }
         );
       } catch (error) {
-        return res.status(500).json({ error });
+        return res
+          .status(500)
+          .json({ error: "Erro interno do servidor", detail: error });
       }
     }
   }
@@ -118,11 +168,11 @@ module.exports = class userController {
         const user = results[0];
 
         // Verificar se a senha corresponde
-
         const senhaValida = await validateUser.comparePassword(
           password,
           user.senha
         );
+
         if (!senhaValida) {
           return res.status(403).json({ error: "Senha Incorreta" });
         }
@@ -151,7 +201,7 @@ module.exports = class userController {
   }
 
   static async getAllUsers(req, res) {
-    const query = `SELECT ID_user, email, username, biografia, plano FROM usuario`;
+    const query = `SELECT ID_user, email, autenticado, biografia, plano, username, name FROM usuario`;
 
     try {
       connect.query(query, function (err, results) {
@@ -170,44 +220,95 @@ module.exports = class userController {
     }
   }
 
+  static async getUserByName(req, res) {
+    const userName = req.params.user;
+
+    if (!userName) {
+      return res.status(400).send("Usuário inválido.");
+    }
+
+    const sql = `
+    SELECT
+      u.username,
+      u.email,
+      u.biografia,
+      u.imagem_user,
+      e.link_insta,
+      e.link_facebook,
+      e.link_github,
+      e.link_pinterest,
+      e.numero_telefone
+    FROM usuario u
+    LEFT JOIN extrainfo e ON e.ID_user = u.ID_user
+    WHERE u.username = ?
+    ORDER BY e.ID_extrainfo DESC
+    LIMIT 1
+  `;
+
+    connect.query(sql, [userName], (err, results) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).send("Erro no servidor.");
+      }
+      if (results.length === 0) {
+        return res.status(404).send("Perfil não encontrado.");
+      }
+
+      const user = results[0];
+      const profile = {
+        username: user.username,
+        email: user.email,
+        biografia: user.biografia,
+        imagem_user: user.imagem_user,
+        extrainfo: {
+          link_insta: user.link_insta || null,
+          link_facebook: user.link_facebook || null,
+          link_github: user.link_github || null,
+          link_pinterest: user.link_pinterest || null,
+          numero_telefone: user.numero_telefone || null,
+        },
+      };
+
+      return res.status(200).json({ profile });
+    });
+  }
+
   static async updateUser(req, res) {
-    const {
-      email,
-      password,
-      confirmPassword,
-      ID_user,
-      biografia,
-      username,
-      plano,
-    } = req.body;
+    const userId = String(req.params.id);
+    const idCorreto = String(req.userId);
+    const { email, biografia, username } = req.body;
+    const imagem = req.file?.buffer || null;
+    const tipoImagem = req.file?.mimetype || null;
 
-    // Verifica se as senhas coincidem
-    if (password !== confirmPassword) {
-      return res.status(400).json({ error: "As senhas não coincidem" });
+    if (idCorreto !== userId) {
+      return res
+        .status(400)
+        .json({ error: "Você não tem permissão de apagar esta conta" });
+    }
+    if (!email || !biografia || !username) {
+      return res
+        .status(400)
+        .json({ error: "Todos os campos são obrigatórios." });
+    }
+    if (!validateUser.validateDataEmail(email)) {
+      return res.status(400).json({ error: "Email inválido" });
+    }
+    if (await validateUser.checkIfEmailCadastrado(email)) {
+      return res.status(400).json({ error: "Email já cadastrado" });
+    }
+    if (await validateUser.validateUserName(username)) {
+      return res.status(400).json({ error: "Usuário já com esse username" });
     }
 
-    // Validação dos dados (incluindo CPF)
-    const validationError = validateUser(req.body);
-    if (validationError) {
-      return res.status(400).json(validationError);
-    }
-
-    const query = `UPDATE usuario SET username=?, email=?, senha=?, biografia=?, plano=? WHERE ID_user = ?`;
-    const values = [
-      username,
-      email,
-      password, // Senha já confirmada
-      biografia,
-      plano,
-      ID_user,
-    ];
+    const query = `UPDATE usuario SET email=?, username=?, biografia=?, imagem=?, tipoImagem=? WHERE ID_user = ?`;
+    const values = [email, username, biografia, imagem, tipoImagem, userId];
 
     try {
       connect.query(query, values, function (err, results) {
         if (err) {
           if (err.code === "ER_DUP_ENTRY") {
             return res.status(400).json({
-              error: "E-mail ou CPF já cadastrados por outro usuário.",
+              error: "E-mail já cadastrado por outro usuário.",
             });
           } else {
             console.error(err);
@@ -227,14 +328,72 @@ module.exports = class userController {
     }
   }
 
-  static async deleteUser(req, res) {
-    const userId = req.params.id; // Pega o ID do usuário da URL
+  static async updatePassword(req, res) {
+    const userId = String(req.params.id);
+    const idCorreto = String(req.userId);
+    const { senha_atual, nova_senha } = req.body;
 
-    if (!userId) {
-      return res.status(400).json({ error: "ID do usuário é necessário" });
+    if (idCorreto !== userId) {
+      return res
+        .status(400)
+        .json({ error: "Você não tem permissão de apagar esta conta" });
+    }
+    if (senha_atual === nova_senha) {
+      return res.status(400).json({ error: "As senhas são iguais" });
     }
 
-    const query = `DELETE FROM usuario WHERE ID_user = ?`; // Garante que estamos buscando pelo 'ID_user'
+    try {
+      const querySelect = "SELECT password FROM usuario WHERE ID_user = ?";
+      connect.query(querySelect, [userId], async (err, results) => {
+        if (err) {
+          console.error(err);
+          return res.status(500).json({ error: "Erro ao buscar usuário" });
+        }
+
+        if (results.length === 0) {
+          return res.status(404).json({ error: "Usuário não encontrado" });
+        }
+
+        const senhaHashAtual = results[0].password;
+
+        // Verifica se a senha atual está correta
+        const senhaCorreta = await bcrypt.compare(senha_atual, senhaHashAtual);
+        if (!senhaCorreta) {
+          return res.status(401).json({ error: "Senha atual incorreta" });
+        }
+
+        // Gera hash da nova senha
+        const novaSenhaHash = await bcrypt.hash(nova_senha, SALT_ROUNDS);
+
+        // Atualiza a senha no banco
+        const queryUpdate = "UPDATE usuario SET password = ? WHERE ID_user = ?";
+        connect.query(queryUpdate, [novaSenhaHash, userId], (err, result) => {
+          if (err) {
+            console.error(err);
+            return res.status(500).json({ error: "Erro ao atualizar a senha" });
+          }
+          return res
+            .status(200)
+            .json({ message: "Senha atualizada com sucesso" });
+        });
+      });
+    } catch (error) {
+      console.error("Erro ao atualizar a senha:", error);
+      return res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  }
+
+  static async deleteUser(req, res) {
+    const userId = String(req.params.id);
+    const idCorreto = String(req.userId);
+
+    if (idCorreto !== userId) {
+      return res
+        .status(400)
+        .json({ error: "Você não tem permissão de apagar esta conta" });
+    }
+
+    const query = `DELETE FROM usuario WHERE ID_user = ?`;
     const values = [userId];
 
     try {
@@ -258,52 +417,27 @@ module.exports = class userController {
     }
   }
 
-  static async generateCode(req, res) {
-    const email = req.body.email;
-    console.log(req.body);
-    console.log(email);
+  static async getAllLikedProjects(req, res) {
+    const id = req.params.ID_user;
 
+    const query = `SELECT p.*
+    FROM projeto p
+    JOIN curtidas c ON p.ID_projeto = c.ID_projeto
+    WHERE c.ID_user = ?
+    ORDER BY p.titulo ASC;`
     
-
-    
-
-    const generatedCode = await validateUser.validateEmail(email);
-
-    if (generatedCode) {
-      return res
-        .status(202)
-        .json({ message: "Email enviado", registered: false });
-    }
-  }
-
-  static async validateCode(req, res) {
-    const {email, code} = req.body;
-
-    const codeOk = await validateUser.validateCode(email, code);
-
-    if (codeOk === true) {
-      try {
-        const query = `UPDATE usuario SET autenticado WHERE email = ?`;
-        connect.query(query, email, (err, results) => {
-          if (err) {
-            console.log("erro ao tornar o usuário como autenticado", err);
-          } else {
-            res.status(200).json({
-              message: "Código válido. Usuário autenticado.",
-              registered: true,
-            });
-          }
-        });
-      } catch (error) {}
-    } else if (codeOk === "expirado") {
-      return res.status(400).json({
-        message: "Código expirado. Tente cadastrar-se novamente",
-        registered: false,
+    try {
+      connect.query(query, [id],  function (err, results) {
+        if (err) {
+          console.log(err);
+          return res.status(500).json({ error: "erro ao buscar projetos curtidos" });
+        } 
+        res.status(200).json({message: "projetos curtidos pelo usuário fornecido: ", results: results})
       });
-    } else {
-      return res
-        .status(400)
-        .json({ message: "Código inválido", registered: false });
+    } catch (error) {
+      console.log(error);
+      return res.status(500).json({ error: "Erro Interno de Servidor" });
     }
   }
+  
 };

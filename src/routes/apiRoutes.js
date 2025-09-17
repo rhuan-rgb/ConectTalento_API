@@ -1,22 +1,28 @@
 const router = require('express').Router();
-const verifyJWT = require("../services/verifyJWT");
+const verifyJWT = require("../services/verifyJWT"); // esperar para implementar
 
 const userController = require("../controllers/userController");
 const projectController = require("../controllers/projectController");
 
 // Rotas userController
 router.post('/user', userController.createUser);
-router.put('/user', verifyJWT, userController.updateUser);
-router.delete('/user/:id', verifyJWT, userController.deleteUser);
 router.post('/login', userController.loginUser);
+router.put('/user/:id', verifyJWT, userController.updateUser);
+router.put("/user/newpassword/:id", verifyJWT, userController.updatePassword);
+router.delete('/user/:id',verifyJWT, userController.deleteUser); 
 router.get("/user", userController.getAllUsers);
-router.post("/user/validatecode", userController.validateCode);
-router.post("/user/generatecode", userController.generateCode);
+router.get("/user/likedProjects/:id", userController.getAllLikedProjects);
+
+
+router.get("/user/:user", userController.getUserByName);
+
+
 
 //Rotas projetoController
-router.post('/project', verifyJWT, projectController.createProject);
+router.post('/project', projectController.createProject);
 router.get("/projects", projectController.getAllProjects);
 router.get("/project/:id", projectController.getProjectByIdUser);
+router.get("/project/total_likes", projectController.get_All_Projects_Order_By_Likes);
 router.put("/project/:id", projectController.updateProject);
 router.delete("/project/:id", projectController.deleteProject);
 
