@@ -33,6 +33,7 @@ CREATE TABLE `projeto` (
 CREATE TABLE `imagens` (
   `ID_imagem`  INT PRIMARY KEY AUTO_INCREMENT,
   `imagem`     LONGBLOB NOT NULL,
+  `tipo_imagem` VARCHAR(10) NOT NULL,
   `ID_projeto` INT      NOT NULL,
   CONSTRAINT `fk_imagens_projeto`
     FOREIGN KEY (`ID_projeto`) REFERENCES `projeto`(`ID_projeto`)
@@ -89,6 +90,7 @@ CREATE TABLE `projeto_log` (
 CREATE TABLE `imagens_log` (
   `ID_imagem`     INT PRIMARY KEY,
   `imagem`        LONGBLOB NOT NULL,
+  `tipo_imagem` VARCHAR(10) NOT NULL,
   `data_deletado` DATETIME NOT NULL
 ) ENGINE=InnoDB;
 
@@ -131,11 +133,14 @@ CREATE TRIGGER trg_projeto_log_imagens_cascade
 BEFORE DELETE ON `projeto`
 FOR EACH ROW
 BEGIN
-  INSERT INTO `imagens_log` (`ID_imagem`, `imagem`, `data_deletado`)
-  SELECT i.`ID_imagem`, i.`imagem`, NOW()
+  INSERT INTO `imagens_log` (`ID_imagem`, `imagem`, `tipo_imagem`, `data_deletado`)
+  SELECT i.`ID_imagem`, i.`imagem`, i.`tipo_imagem`, NOW()
   FROM `imagens` AS i
   WHERE i.`ID_projeto` = OLD.`ID_projeto`;
 END//
+
+
+--REVISAR PARA COLOCAR ID_USER
 
 -- Após deletar PROJETO, registra o próprio projeto_log (quando o delete é direto no projeto)
 DROP TRIGGER IF EXISTS trg_projeto_to_projeto_log//
@@ -153,8 +158,8 @@ CREATE TRIGGER trg_imagens_to_imagens_log
 AFTER DELETE ON `imagens`
 FOR EACH ROW
 BEGIN
-  INSERT INTO `imagens_log` (`ID_imagem`, `imagem`, `data_deletado`)
-  VALUES (OLD.`ID_imagem`, OLD.`imagem`, NOW());
+  INSERT INTO `imagens_log` (`ID_imagem`, `imagem`, `tipo_imagem`, `data_deletado`)
+  VALUES (OLD.`ID_imagem`, OLD.`imagem`, OLD.`tipo_imagem`, NOW());
 END//
 
 -- Após deletar EXTRAINFO diretamente, registra no log
@@ -209,8 +214,8 @@ CREATE TRIGGER trg_usuario_log_imagens_cascade
 BEFORE DELETE ON `usuario`
 FOR EACH ROW
 BEGIN
-  INSERT INTO `imagens_log` (`ID_imagem`, `imagem`, `data_deletado`)
-  SELECT i.`ID_imagem`, i.`imagem`, NOW()
+  INSERT INTO `imagens_log` (`ID_imagem`, `imagem`, `tipo_imagem`, `data_deletado`)
+  SELECT i.`ID_imagem`, i.`imagem`, i.`tipo_imagem`, NOW()
   FROM `imagens` AS i
   INNER JOIN `projeto` AS p ON p.`ID_projeto` = i.`ID_projeto`
   WHERE p.`ID_user` = OLD.`ID_user`;

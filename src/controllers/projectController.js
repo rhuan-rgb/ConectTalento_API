@@ -2,34 +2,84 @@
 const connect = require("../db/connect"); // Ajuste o caminho da sua conexão
 
 module.exports = class projectController {
-  // CREATE
   static async createProject(req, res) {
-    const { id_usuario, titulo, descricao } = req.body;
+    const { ID_user } = req.params;
+    const { titulo, descricao } = req.body;
+    const imagens = req.files; // várias imagens
+    const imagem_tipo = req.files;
 
-    if (!id_usuario || !titulo || !descricao) {
+    if (!ID_user || !titulo || !descricao || !imagens || !imagem_tipo) {
       return res
         .status(400)
-        .json({ error: "Todos os campos devem ser preenchidos" });
+        .json({
+          error:
+            "Todos os campos devem ser preenchidos",
+        });
+    }
+
+    if (imagens.length > 5) {
+      return res
+        .status(400)
+        .json({ error: "Você só pode inserir 5 imagens por projeto" });
     }
 
     try {
-      const query = `INSERT INTO projeto (id_usuario, titulo, descricao) VALUES (?, ?, ?)`;
-      connect.query(query, [id_usuario, titulo, descricao], (err, result) => {
-        if (err) {
-          console.error(err);
-          return res.status(500).json({ error: "Erro ao criar projeto" });
-        }
+      const queryProjeto = `INSERT INTO projeto (ID_user, titulo, descricao, criado_em) VALUES (?, ?, ?, NOW())`;
+      connect.query(
+        queryProjeto,
+        [ID_user, titulo, descricao],
+        (err, result) => {
+          if (err) {
+            console.error(err);
+            return res.status(500).json({ error: "Erro ao criar projeto" });
+          }
 
-        return res.status(201).json({
-          message: "Projeto criado com sucesso",
-          projetoId: result.insertId,
-        });
-      });
+          const projetoId = result.insertId;
+
+          // Promessas para aguardar a inserção de TODAS as imagens
+          const promessas = imagens.map((img, index) => {
+            const ordem = index + 1;
+            const queryImagem = `
+            INSERT INTO imagens (imagem, imagem_tipo, ID_projeto, ordem)
+            VALUES (?, ?, ?, ?)
+          `;
+
+            const buffer = img.buffer;
+            const tipo = img.mimetype;
+
+            const values = [buffer, tipo, projetoId, ordem];
+
+            return new Promise((resolve, reject) => {
+              connect.query(queryImagem, values, (err) => {
+                if (err) {
+                  console.error("Erro ao salvar imagem:", err);
+                  return reject(err);
+                }
+                resolve();
+              });
+            });
+          });
+
+          Promise.all(promessas)
+            .then(() => {
+              return res.status(201).json({
+                message: "Projeto e imagens criados com sucesso",
+              });
+            })
+            .catch(() => {
+              return res
+                .status(500)
+                .json({ error: "Erro ao salvar uma ou mais imagens" });
+            });
+        }
+      );
     } catch (error) {
       console.error(error);
       return res.status(500).json({ error: "Erro no servidor" });
     }
   }
+  
+  
 
   // READ ALL
   static async getAllProjects(req, res) {
