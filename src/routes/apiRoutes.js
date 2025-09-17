@@ -1,5 +1,6 @@
 const router = require('express').Router();
 const verifyJWT = require("../services/verifyJWT"); // esperar para implementar
+const upload = require("../services/upload");
 
 const userController = require("../controllers/userController");
 const projectController = require("../controllers/projectController");
@@ -15,6 +16,7 @@ router.get("/user/:user", userController.getUserByName);
 
 //Rotas projetoController
 router.post('/project', projectController.createProject);
+router.post("/project", upload.array("imagens"), projectController.createProject);
 router.get("/projects", projectController.getAllProjects);
 router.get("/project/:id", projectController.getProjectByIdUser);
 router.put("/project/:id", projectController.updateProject);

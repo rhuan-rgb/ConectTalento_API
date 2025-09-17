@@ -4,25 +4,39 @@ const connect = require("../db/connect"); // Ajuste o caminho da sua conexão
 module.exports = class projectController {
   // CREATE
   static async createProject(req, res) {
-    const { id_usuario, titulo, descricao } = req.body;
-
-    if (!id_usuario || !titulo || !descricao) {
-      return res
-        .status(400)
-        .json({ error: "Todos os campos devem ser preenchidos" });
+    const ID_user = req.params;
+    const {titulo, descricao } = req.body;
+    const imagens = req.files; // várias imagens
+  
+    if (!titulo || !descricao || !imagens) {
+      return res.status(400).json({ error: "Todos os campos devem ser preenchidos e pelo menos uma imagem deve ser enviada" });
+    }
+    
+    if(imagens.length > 5){
+      return res.status(400).json({ error: "Você só pode inserir 5 imagens por projeto" });
     }
 
     try {
-      const query = `INSERT INTO projeto (id_usuario, titulo, descricao) VALUES (?, ?, ?)`;
-      connect.query(query, [id_usuario, titulo, descricao], (err, result) => {
+      const queryProjeto = `INSERT INTO projeto (ID_user, titulo, descricao) VALUES (?, ?, ?)`;
+      connect.query(queryProjeto, [ID_user, titulo, descricao], (err, result) => {
         if (err) {
           console.error(err);
           return res.status(500).json({ error: "Erro ao criar projeto" });
         }
-
+  
+        const projetoId = result.insertId;
+  
+        imagens.forEach((img, index) => {
+          const ordem = index + 1;
+          const queryImagem = `INSERT INTO imagens (imagem, ID_projeto, ordem) VALUES (?, ?, ?)`;
+          connect.query(queryImagem, [img.buffer, projetoId, ordem], (err) => {
+            if (err) console.error("Erro ao salvar imagem:", err);
+          });
+        });
+  
         return res.status(201).json({
           message: "Projeto criado com sucesso",
-          projetoId: result.insertId,
+          projetoId,
         });
       });
     } catch (error) {
@@ -30,6 +44,8 @@ module.exports = class projectController {
       return res.status(500).json({ error: "Erro no servidor" });
     }
   }
+  
+  
 
   // READ ALL
   static async getAllProjects(req, res) {
