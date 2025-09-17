@@ -25,7 +25,7 @@ DROP TABLE IF EXISTS `code_validacao`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `code_validacao` (
-  `code` char(6) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `code` char(6) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `code_expira_em` datetime NOT NULL,
   `ID_user` int NOT NULL,
   PRIMARY KEY (`code`),
@@ -52,7 +52,7 @@ DROP TABLE IF EXISTS `code_validacao_log`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `code_validacao_log` (
-  `code` char(6) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `code` char(6) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `code_expira_em` datetime NOT NULL,
   `data_deletado` datetime NOT NULL,
   PRIMARY KEY (`code`)
@@ -69,6 +69,72 @@ LOCK TABLES `code_validacao_log` WRITE;
 UNLOCK TABLES;
 
 --
+-- Table structure for table `curtidas`
+--
+
+DROP TABLE IF EXISTS `curtidas`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `curtidas` (
+  `ID_curtida` int NOT NULL AUTO_INCREMENT,
+  `ID_user` int NOT NULL,
+  `ID_projeto` int NOT NULL,
+  PRIMARY KEY (`ID_curtida`),
+  KEY `ID_user` (`ID_user`),
+  KEY `ID_projeto` (`ID_projeto`),
+  CONSTRAINT `curtidas_ibfk_1` FOREIGN KEY (`ID_user`) REFERENCES `usuario` (`ID_user`),
+  CONSTRAINT `curtidas_ibfk_2` FOREIGN KEY (`ID_projeto`) REFERENCES `projeto` (`ID_projeto`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `curtidas`
+--
+
+LOCK TABLES `curtidas` WRITE;
+/*!40000 ALTER TABLE `curtidas` DISABLE KEYS */;
+/*!40000 ALTER TABLE `curtidas` ENABLE KEYS */;
+UNLOCK TABLES;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`alunods`@`%`*/ /*!50003 TRIGGER `adicionar_curtida` AFTER INSERT ON `curtidas` FOR EACH ROW BEGIN
+    UPDATE projeto
+    SET total_curtidas = total_curtidas + 1
+    WHERE projeto.ID_projeto = NEW.ID_projeto;
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`alunods`@`%`*/ /*!50003 TRIGGER `remover_curtida` AFTER DELETE ON `curtidas` FOR EACH ROW BEGIN
+    UPDATE projeto
+    SET total_curtidas = total_curtidas - 1
+    WHERE projeto.ID_projeto = OLD.ID_projeto;
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+
+--
 -- Table structure for table `extrainfo`
 --
 
@@ -77,12 +143,11 @@ DROP TABLE IF EXISTS `extrainfo`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `extrainfo` (
   `ID_extrainfo` int NOT NULL AUTO_INCREMENT,
-  `link_insta` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `link_facebook` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `link_github` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `link_pinterest` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `numero_telefone` char(11) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `plano` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `link_insta` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `link_facebook` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `link_github` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `link_pinterest` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `numero_telefone` char(11) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `ID_user` int NOT NULL,
   PRIMARY KEY (`ID_extrainfo`),
   KEY `fk_extrainfo_user` (`ID_user`),
@@ -131,11 +196,12 @@ DROP TABLE IF EXISTS `extrainfo_log`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `extrainfo_log` (
   `ID_extrainfo` int NOT NULL AUTO_INCREMENT,
-  `link_insta` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `link_facebook` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `link_github` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `link_pinterest` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `numero_telefone` char(11) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `link_insta` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `link_facebook` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `link_github` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `link_pinterest` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `numero_telefone` char(11) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `ID_user` int NOT NULL,
   `data_deletado` datetime NOT NULL,
   PRIMARY KEY (`ID_extrainfo`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -160,6 +226,8 @@ DROP TABLE IF EXISTS `imagens`;
 CREATE TABLE `imagens` (
   `ID_imagem` int NOT NULL AUTO_INCREMENT,
   `imagem` longblob NOT NULL,
+  `tipo_imagem` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `ordem` int NOT NULL,
   `ID_projeto` int NOT NULL,
   PRIMARY KEY (`ID_imagem`),
   KEY `fk_imagens_projeto` (`ID_projeto`),
@@ -208,6 +276,7 @@ CREATE TABLE `imagens_log` (
   `ID_imagem` int NOT NULL AUTO_INCREMENT,
   `imagem` longblob NOT NULL,
   `data_deletado` datetime NOT NULL,
+  `ID_projeto` int NOT NULL,
   PRIMARY KEY (`ID_imagem`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -230,14 +299,13 @@ DROP TABLE IF EXISTS `projeto`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `projeto` (
   `ID_projeto` int NOT NULL AUTO_INCREMENT,
-  `titulo` varchar(150) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `descrição` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `titulo` varchar(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `descricao` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `total_curtidas` int DEFAULT '0',
+  `criado_em` datetime NOT NULL,
   `ID_user` int NOT NULL,
-  `ID_imagem` int DEFAULT NULL,
   PRIMARY KEY (`ID_projeto`),
   KEY `fk_projeto_user` (`ID_user`),
-  KEY `fk_projeto_capa_imagem` (`ID_imagem`),
-  CONSTRAINT `fk_projeto_capa_imagem` FOREIGN KEY (`ID_imagem`) REFERENCES `imagens` (`ID_imagem`) ON DELETE SET NULL,
   CONSTRAINT `fk_projeto_user` FOREIGN KEY (`ID_user`) REFERENCES `usuario` (`ID_user`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -301,9 +369,10 @@ DROP TABLE IF EXISTS `projeto_log`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `projeto_log` (
   `ID_projeto` int NOT NULL AUTO_INCREMENT,
-  `titulo` varchar(150) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `descrição` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `titulo` varchar(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `descricao` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `data_deletado` datetime NOT NULL,
+  `ID_user` int NOT NULL,
   PRIMARY KEY (`ID_projeto`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -318,36 +387,6 @@ LOCK TABLES `projeto_log` WRITE;
 UNLOCK TABLES;
 
 --
--- Table structure for table `user_log`
---
-
-DROP TABLE IF EXISTS `user_log`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!50503 SET character_set_client = utf8mb4 */;
-CREATE TABLE `user_log` (
-  `ID_user` int NOT NULL AUTO_INCREMENT,
-  `email` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `autenticado` tinyint(1) NOT NULL,
-  `biografia` text COLLATE utf8mb4_unicode_ci,
-  `senha` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `plano` tinyint(1) NOT NULL,
-  `username` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `criado_em` datetime NOT NULL,
-  `data_deletado` datetime NOT NULL,
-  PRIMARY KEY (`ID_user`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `user_log`
---
-
-LOCK TABLES `user_log` WRITE;
-/*!40000 ALTER TABLE `user_log` DISABLE KEYS */;
-/*!40000 ALTER TABLE `user_log` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
 -- Table structure for table `usuario`
 --
 
@@ -356,15 +395,18 @@ DROP TABLE IF EXISTS `usuario`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `usuario` (
   `ID_user` int NOT NULL AUTO_INCREMENT,
-  `email` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `email` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `autenticado` tinyint(1) NOT NULL,
-  `biografia` text COLLATE utf8mb4_unicode_ci,
-  `senha` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `imagem` longblob,
+  `biografia` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+  `senha` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `plano` tinyint(1) NOT NULL,
-  `username` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `username` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `name` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
   `criado_em` datetime NOT NULL,
   PRIMARY KEY (`ID_user`),
   UNIQUE KEY `email` (`email`),
+  UNIQUE KEY `username_UNIQUE` (`username`),
   KEY `ix_auth_criado` (`autenticado`,`criado_em`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -424,6 +466,37 @@ DELIMITER ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
 /*!50003 SET character_set_results = @saved_cs_results */ ;
 /*!50003 SET collation_connection  = @saved_col_connection */ ;
+
+--
+-- Table structure for table `usuario_log`
+--
+
+DROP TABLE IF EXISTS `usuario_log`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `usuario_log` (
+  `ID_user` int NOT NULL,
+  `email` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `autenticado` tinyint NOT NULL,
+  `imagem` longblob,
+  `biografia` text COLLATE utf8mb4_unicode_ci,
+  `senha` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `plano` tinyint NOT NULL,
+  `username` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `criado_em` datetime NOT NULL,
+  `name` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  PRIMARY KEY (`ID_user`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `usuario_log`
+--
+
+LOCK TABLES `usuario_log` WRITE;
+/*!40000 ALTER TABLE `usuario_log` DISABLE KEYS */;
+/*!40000 ALTER TABLE `usuario_log` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Dumping events for database 'conectalento'
@@ -496,4 +569,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-09-10 14:32:08
+-- Dump completed on 2025-09-17 13:09:38
