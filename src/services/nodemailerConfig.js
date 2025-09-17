@@ -22,7 +22,6 @@ function generateCode(ID_user) {
     code += chars[idx];
   }
 
-
   const query = `
     INSERT INTO code_validacao (code, code_expira_em, ID_user)
     VALUES (?, NOW() + INTERVAL 15 MINUTE, ?);
@@ -30,36 +29,16 @@ function generateCode(ID_user) {
 
   return new Promise((resolve, reject) => {
     connect.query(query, [code, ID_user], (err) => {
-
       if (err) {
-        console.log("erro ao pegar o id do usuario pelo email: ", err);
-        return reject(err);
-      }
-
-      if (results.length === 0) {
-        return reject(new Error("Usuário não encontrado", results));
-        
-      }
-
-      const id = results[0].ID_user; // pega o id corretamente
-
-      const queryInsert = `
-        INSERT INTO code_validacao (code, code_expira_em, ID_user)
-        VALUES (?, NOW() + INTERVAL 15 MINUTE, ?)
-      `;
-
-      connect.query(queryInsert, [code, id], (err) => {
-        if (err) {
-          if (err.code === "ER_DUP_ENTRY") {
-            resolve(false); // código duplicado → tente outro
-          } else {
-            console.error("Erro ao inserir código:", err);
-            resolve("dont_repeat");
-          }
+        if (err.code === "ER_DUP_ENTRY") {
+          resolve(false); // código duplicado → tente outro
         } else {
-          resolve(code);
+          console.error("Erro ao inserir código:", err);
+          resolve("dont_repeat"); // erro inesperado → sair do loop
         }
-      });
+      } else {
+        resolve(code); // deu certo, retornamos o código
+      }
     });
   });
 }
@@ -86,9 +65,7 @@ const sendMail = async (userEmail, ID_user) => {
     }
 
     if (!code) {
-      throw new Error(
-        "Não foi possível gerar um código único após várias tentativas"
-      );
+      throw new Error("Não foi possível gerar um código único após várias tentativas");
     }
 
     const info = await transporter.sendMail({
@@ -100,9 +77,10 @@ const sendMail = async (userEmail, ID_user) => {
 
     return code;
   } catch (err) {
-    console.error(userEmail, "mensagem não enviada:", err);
+    console.error("mensagem não enviada:", err);
     return null;
   }
 };
+
 
 module.exports = sendMail;

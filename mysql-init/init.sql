@@ -9,7 +9,7 @@ CREATE TABLE `usuario` (
   `email`       VARCHAR(255) UNIQUE NOT NULL,
   `autenticado` BOOLEAN      NOT NULL,
   `imagem_user` LONGBLOB NULL,
-  `tipo_imagem` VARCHAR(100) NULL,
+  `tipo_imagem` VARCHAR(10) NULL,
   `biografia`   TEXT         NULL,
   `senha`       VARCHAR(255) NOT NULL,
   `plano`       BOOLEAN      NOT NULL,
