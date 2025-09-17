@@ -8,6 +8,7 @@ CREATE TABLE `usuario` (
   `email`       VARCHAR(255) UNIQUE NOT NULL,
   `autenticado` BOOLEAN      NOT NULL,
   `imagem_user` LONGBLOB NULL,
+  `tipo_imagem` VARCHAR(100) NULL,
   `biografia`   TEXT         NULL,
   `senha`       VARCHAR(255) NOT NULL,
   `plano`       BOOLEAN      NOT NULL,
@@ -50,7 +51,6 @@ CREATE TABLE `extrainfo` (
   `link_github`     VARCHAR(255),
   `link_pinterest`  VARCHAR(255),
   `numero_telefone` CHAR(11),
-  `plano`           VARCHAR(255),
   `ID_user`         INT NOT NULL,
   CONSTRAINT `fk_extrainfo_user`
     FOREIGN KEY (`ID_user`) REFERENCES `usuario`(`ID_user`)
@@ -73,6 +73,7 @@ CREATE TABLE `user_log` (
   `email`         VARCHAR(255) NOT NULL,
   `autenticado`   BOOLEAN      NOT NULL,
   `imagem_user`   LONGBLOB NULL,
+  `tipo_imagem`   VARCHAR(100) NULL,
   `biografia`     TEXT         NULL,
   `senha`         VARCHAR(255) NOT NULL,
   `plano`         BOOLEAN      NOT NULL,
@@ -121,9 +122,9 @@ AFTER DELETE ON `usuario`
 FOR EACH ROW
 BEGIN
   INSERT INTO `user_log` (
-    `ID_user`, `email`, `autenticado`, `imagem_user`, `biografia`, `senha`, `plano`, `username`, `name`, `criado_em`, `data_deletado`
+    `ID_user`, `email`, `autenticado`, `imagem_user`, `tipo_imagem`, `biografia`, `senha`, `plano`, `username`, `name`, `criado_em`, `data_deletado`
   ) VALUES (
-    OLD.`ID_user`, OLD.`email`, OLD.`autenticado`, OLD.`imagem_user`, OLD.`biografia`, OLD.`senha`, OLD.`plano`, OLD.`username`, OLD.`name`, OLD.`criado_em`,
+    OLD.`ID_user`, OLD.`email`, OLD.`autenticado`, OLD.`imagem_user`, OLD.`tipo_imagem`, OLD.`biografia`, OLD.`senha`, OLD.`plano`, OLD.`username`, OLD.`name`, OLD.`criado_em`,
     NOW()
   );
 END//

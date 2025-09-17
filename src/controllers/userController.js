@@ -33,10 +33,10 @@ module.exports = class userController {
           const qSelectUser = "SELECT ID_user, email, username, name, plano, criado_em FROM usuario WHERE email = ? LIMIT 1";
           connect.query(qSelectUser, [email], (err, rows) => {
             if (err) {
-              return res.status(500).json({ message: "Erro ao buscar usuário.", err });
+              return res.status(500).json({ error: "Erro ao buscar usuário.", err });
             }
             if (!rows.length) {
-              return res.status(404).json({ message: "Usuário não encontrado." });
+              return res.status(404).json({ error: "Usuário não encontrado." });
             }
 
             const user = rows[0];
@@ -45,7 +45,7 @@ module.exports = class userController {
             const qUpdate = "UPDATE usuario SET autenticado = true WHERE ID_user = ? LIMIT 1";
             connect.query(qUpdate, [user.ID_user], (err2) => {
               if (err2) {
-                return res.status(500).json({ message: "Erro ao autenticar usuário.", err: err2 });
+                return res.status(500).json({ error: "Erro ao autenticar usuário.", err: err2 });
               }
 
               // gera JWT
@@ -59,14 +59,14 @@ module.exports = class userController {
             });
           });
         } catch (error) {
-          return res.status(500).json({ message: "Erro interno do servidor.", error });
+          return res.status(500).json({ error: "Erro interno do servidor.", error });
         }
       } else if (codeOk === "expirado") {
         return res.status(400).json({
-          message: "Código expirado. Tente cadastrar-se novamente.",
+          error: "Código expirado. Tente cadastrar-se novamente.",
         });
       } else {
-        return res.status(400).json({ message: "Código inválido." });
+        return res.status(400).json({ error: "Código inválido." });
       }
     } else {
       try {
@@ -165,7 +165,7 @@ module.exports = class userController {
   }
 
   static async getAllUsers(req, res) {
-    const query = `SELECT ID_user, email, autenticado, biografia, plano, username FROM usuario`;
+    const query = `SELECT ID_user, email, autenticado, biografia, plano, username, name FROM usuario`;
 
     try {
       connect.query(query, function (err, results) {
@@ -238,23 +238,39 @@ module.exports = class userController {
   }
 
   static async updateUser(req, res) {
-    const { ID_user, email, biografia, password, confirmPassword, username } = req.body;
+    const userId = String(req.params.id);
+    const idCorreto = String(req.userId);
+    const { email, biografia, username } = req.body;
+    const imagem = req.file?.buffer || null
+    const tipoImagem = req.file?.mimetype || null
 
-    // Verifica se as senhas coincidem
-    if (password !== confirmPassword) {
-      return res.status(400).json({ error: "As senhas não coincidem" });
+
+    if (idCorreto !== userId) {
+      return res
+        .status(400)
+        .json({ error: "Você não tem permissão de apagar esta conta" });
     }
-    if (!ID_user || !email || !password || !confirmPassword || !username) {
+    if (!email || !biografia || !username) {
       return res.status(400).json({ error: "Todos os campos são obrigatórios." });
     }
+    if (!validateUser.validateDataEmail(email)) {
+      return res.status(400).json({ error: "Email inválido" });
+    } 
+    if (await validateUser.checkIfEmailCadastrado(email)) {
+      return res.status(400).json({ error: "Email já cadastrado" });
+    }     
+    if (await validateUser.validateUserName(username)) {
+      return res.status(400).json({ error: "Usuário já com esse username" });
+    }    
 
-    const query = `UPDATE usuario SET username=?, email=?, senha=?, biografia=? WHERE ID_user = ?`;
+    const query = `UPDATE usuario SET email=?, username=?, biografia=?, imagem=?, tipoImagem=? WHERE ID_user = ?`;
     const values = [
-      username,
       email,
-      password,
+      username,
       biografia,
-      ID_user,
+      imagem,
+      tipoImagem,
+      userId,
     ];
 
     try {
@@ -262,7 +278,7 @@ module.exports = class userController {
         if (err) {
           if (err.code === "ER_DUP_ENTRY") {
             return res.status(400).json({
-              error: "E-mail já cadastrados por outro usuário.",
+              error: "E-mail já cadastrado por outro usuário.",
             });
           } else {
             console.error(err);
@@ -282,14 +298,71 @@ module.exports = class userController {
     }
   }
 
-  static async deleteUser(req, res) {
-    const userId = req.params.id; // Pega o ID do usuário da URL
 
-    if (!userId) {
-      return res.status(400).json({ error: "ID do usuário é necessário" });
+  static async updatePassword(req, res) {
+    const userId = String(req.params.id);
+    const idCorreto = String(req.userId);
+    const { senha_atual, nova_senha } = req.body;
+
+    if (idCorreto !== userId) {
+      return res
+        .status(400)
+        .json({ error: "Você não tem permissão de apagar esta conta" });
+    }
+    if ( senha_atual === nova_senha) {
+      return res.status(400).json({ error: "As senhas são iguais" });
+    }
+  
+    try {
+      const querySelect = "SELECT password FROM usuario WHERE ID_user = ?";
+      connect.query(querySelect, [userId], async (err, results) => {
+        if (err) {
+          console.error(err);
+          return res.status(500).json({ error: "Erro ao buscar usuário" });
+        }
+  
+        if (results.length === 0) {
+          return res.status(404).json({ error: "Usuário não encontrado" });
+        }
+  
+        const senhaHashAtual = results[0].password;
+  
+        // Verifica se a senha atual está correta
+        const senhaCorreta = await bcrypt.compare(senha_atual, senhaHashAtual);
+        if (!senhaCorreta) {
+          return res.status(401).json({ error: "Senha atual incorreta" });
+        }
+  
+        // Gera hash da nova senha
+        const novaSenhaHash = await bcrypt.hash(nova_senha, SALT_ROUNDS);
+  
+        // Atualiza a senha no banco
+        const queryUpdate = "UPDATE usuario SET password = ? WHERE ID_user = ?";
+        connect.query(queryUpdate, [novaSenhaHash, userId], (err, result) => {
+          if (err) {
+            console.error(err);
+            return res.status(500).json({ error: "Erro ao atualizar a senha" });
+          }
+          return res.status(200).json({ message: "Senha atualizada com sucesso" });
+        });
+      });
+    } catch (error) {
+      console.error("Erro ao atualizar a senha:", error);
+      return res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  }
+
+  static async deleteUser(req, res) {
+    const userId = String(req.params.id);
+    const idCorreto = String(req.userId);
+
+    if (idCorreto !== userId) {
+      return res
+        .status(400)
+        .json({ error: "Você não tem permissão de apagar esta conta" });
     }
 
-    const query = `DELETE FROM usuario WHERE ID_user = ?`; // Garante que estamos buscando pelo 'ID_user'
+    const query = `DELETE FROM usuario WHERE ID_user = ?`;
     const values = [userId];
 
     try {

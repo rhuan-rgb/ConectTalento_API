@@ -7,8 +7,9 @@ const projectController = require("../controllers/projectController");
 // Rotas userController
 router.post('/user', userController.createUser);
 router.post('/login', userController.loginUser);
-router.put('/user', userController.updateUser); // refatorar
-router.delete('/user/:id', userController.deleteUser); // refatorar
+router.put('/user/:id', verifyJWT, userController.updateUser);
+router.put("/user/newpassword/:id", verifyJWT, userController.updatePassword);
+router.delete('/user/:id',verifyJWT, userController.deleteUser); 
 router.get("/user", userController.getAllUsers);
 router.get("/user/:user", userController.getUserByName);
 
