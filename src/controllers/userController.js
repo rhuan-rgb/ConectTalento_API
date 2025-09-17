@@ -240,7 +240,7 @@ module.exports = class userController {
   static async updateUser(req, res) {
     const userId = String(req.params.id);
     const idCorreto = String(req.userId);
-    const { email, biografia, username } = req.body;
+    const { email, biografia, username, name } = req.body;
     const imagem = req.file?.buffer || null
     const tipoImagem = req.file?.mimetype || null
 
@@ -250,7 +250,7 @@ module.exports = class userController {
         .status(400)
         .json({ error: "Você não tem permissão de apagar esta conta" });
     }
-    if (!email || !biografia || !username) {
+    if (!email || !biografia || !username || !name) {
       return res.status(400).json({ error: "Todos os campos são obrigatórios." });
     }
     if (!validateUser.validateDataEmail(email)) {
@@ -263,10 +263,11 @@ module.exports = class userController {
       return res.status(400).json({ error: "Usuário já com esse username" });
     }    
 
-    const query = `UPDATE usuario SET email=?, username=?, biografia=?, imagem=?, tipoImagem=? WHERE ID_user = ?`;
+    const query = `UPDATE usuario SET email=?, username=?, name=?, biografia=?, imagem=?, tipoImagem=? WHERE ID_user = ?`;
     const values = [
       email,
       username,
+      name,
       biografia,
       imagem,
       tipoImagem,
