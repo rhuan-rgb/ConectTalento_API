@@ -1,171 +1,410 @@
-CREATE DATABASE IF NOT EXISTS conectalento
-  DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE conectalento;
+CREATE DATABASE IF NOT EXISTS `conectalento` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci */ /*!80016 DEFAULT ENCRYPTION='N' */;
+USE `conectalento`;
 
--- ========= TABELAS =========
+--
+-- Table structure for table `usuario`
+--
+
+DROP TABLE IF EXISTS `usuario`;
+/*!40101 SET @saved_cs_client      = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `usuario` (
-  `ID_user`     INT PRIMARY KEY AUTO_INCREMENT,
-  `email`       VARCHAR(255) UNIQUE NOT NULL,
-  `autenticado` BOOLEAN      NOT NULL,
-  `imagem_user` LONGBLOB NULL,
-  `biografia`   TEXT         NULL,
-  `senha`       VARCHAR(255) NOT NULL,
-  `plano`       BOOLEAN      NOT NULL,
-  `username`    VARCHAR(50)  UNIQUE NOT NULL,
-  `name`        VARCHAR(255) NOT NULL,
-  `criado_em`   DATETIME     NOT NULL,
-  INDEX `ix_auth_criado` (`autenticado`,`criado_em`)
-) ENGINE=InnoDB;
+  `ID_user` int NOT NULL AUTO_INCREMENT,
+  `email` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `autenticado` tinyint(1) NOT NULL,
+  `imagem` longblob,
+  `biografia` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+  `senha` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `plano` tinyint(1) NOT NULL,
+  `username` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `name` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `criado_em` datetime NOT NULL,
+  PRIMARY KEY (`ID_user`),
+  UNIQUE KEY `email` (`email`),
+  UNIQUE KEY `username_UNIQUE` (`username`),
+  KEY `ix_auth_criado` (`autenticado`,`criado_em`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 
-CREATE TABLE `projeto` (
-  `ID_projeto`  INT PRIMARY KEY AUTO_INCREMENT,
-  `titulo`      VARCHAR(150) NOT NULL,
-  `descricao`   VARCHAR(255) NOT NULL,
-  `ID_user`     INT NOT NULL,
-  `ID_imagem`   INT NULL,
-  CONSTRAINT `fk_projeto_user`
-    FOREIGN KEY (`ID_user`) REFERENCES `usuario`(`ID_user`)
-    ON DELETE CASCADE
-) ENGINE=InnoDB;
+--
+-- Table structure for table `usuario_log`
+--
 
-CREATE TABLE `imagens` (
-  `ID_imagem`  INT PRIMARY KEY AUTO_INCREMENT,
-  `imagem`     LONGBLOB NOT NULL,
-  `ID_projeto` INT      NOT NULL,
-  CONSTRAINT `fk_imagens_projeto`
-    FOREIGN KEY (`ID_projeto`) REFERENCES `projeto`(`ID_projeto`)
-    ON DELETE CASCADE
-) ENGINE=InnoDB;
+DROP TABLE IF EXISTS `usuario_log`;
+/*!40101 SET @saved_cs_client      = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `usuario_log` (
+  `ID_user` int NOT NULL,
+  `email` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `autenticado` tinyint NOT NULL,
+  `imagem` longblob,
+  `biografia` text COLLATE utf8mb4_unicode_ci,
+  `senha` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `plano` tinyint NOT NULL,
+  `username` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `criado_em` datetime NOT NULL,
+  `name` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  PRIMARY KEY (`ID_user`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 
--- FK de capa do projeto (após existir imagens)
-ALTER TABLE `projeto`
-  ADD CONSTRAINT `fk_projeto_capa_imagem`
-    FOREIGN KEY (`ID_imagem`) REFERENCES `imagens`(`ID_imagem`)
-    ON DELETE SET NULL;
+--
+-- Table structure for table `extrainfo`
+--
 
+DROP TABLE IF EXISTS `extrainfo`;
+/*!40101 SET @saved_cs_client      = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `extrainfo` (
-  `ID_extrainfo`    INT PRIMARY KEY AUTO_INCREMENT,
-  `link_insta`      VARCHAR(255),
-  `link_facebook`   VARCHAR(255),
-  `link_github`     VARCHAR(255),
-  `link_pinterest`  VARCHAR(255),
-  `numero_telefone` CHAR(11),
-  `plano`           VARCHAR(255),
-  `ID_user`         INT NOT NULL,
-  CONSTRAINT `fk_extrainfo_user`
-    FOREIGN KEY (`ID_user`) REFERENCES `usuario`(`ID_user`)
-    ON DELETE CASCADE
-) ENGINE=InnoDB;
+  `ID_extrainfo` int NOT NULL AUTO_INCREMENT,
+  `link_insta` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `link_facebook` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `link_github` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `link_pinterest` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `numero_telefone` char(11) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `ID_user` int NOT NULL,
+  PRIMARY KEY (`ID_extrainfo`),
+  KEY `fk_extrainfo_user` (`ID_user`),
+  CONSTRAINT `fk_extrainfo_user` FOREIGN KEY (`ID_user`) REFERENCES `usuario` (`ID_user`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 
-CREATE TABLE `code_validacao` (
-  `code`           CHAR(6)     PRIMARY KEY,
-  `code_expira_em` DATETIME    NOT NULL,
-  `ID_user`        INT NOT NULL,
-  CONSTRAINT `fk_code_user`
-    FOREIGN KEY (`ID_user`) REFERENCES `usuario`(`ID_user`)
-    ON DELETE CASCADE,
-  INDEX `ix_code_expira` (`code_expira_em`)
-) ENGINE=InnoDB;
+--
+-- Table structure for table `extrainfo_log`
+--
 
--- ========= LOGS =========
-CREATE TABLE `user_log` (
-  `ID_user`       INT PRIMARY KEY,
-  `email`         VARCHAR(255) NOT NULL,
-  `autenticado`   BOOLEAN      NOT NULL,
-  `imagem_user`   LONGBLOB NULL,
-  `biografia`     TEXT         NULL,
-  `senha`         VARCHAR(255) NOT NULL,
-  `plano`         BOOLEAN      NOT NULL,
-  `username`      VARCHAR(50)  NOT NULL,
-  `name`          VARCHAR(255) NOT NULL,
-  `criado_em`     DATETIME     NOT NULL,
-  `data_deletado` DATETIME     NOT NULL
-) ENGINE=InnoDB;
-
-CREATE TABLE `projeto_log` (
-  `ID_projeto`    INT PRIMARY KEY,
-  `titulo`        VARCHAR(150) NOT NULL,
-  `descricao`     VARCHAR(255) NOT NULL,
-  `data_deletado` DATETIME     NOT NULL
-) ENGINE=InnoDB;
-
-CREATE TABLE `imagens_log` (
-  `ID_imagem`     INT PRIMARY KEY,
-  `imagem`        LONGBLOB NOT NULL,
-  `data_deletado` DATETIME NOT NULL
-) ENGINE=InnoDB;
-
+DROP TABLE IF EXISTS `extrainfo_log`;
+/*!40101 SET @saved_cs_client      = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `extrainfo_log` (
-  `ID_extrainfo`    INT PRIMARY KEY,
-  `link_insta`      VARCHAR(255),
-  `link_facebook`   VARCHAR(255),
-  `link_github`     VARCHAR(255),
-  `link_pinterest`  VARCHAR(255),
-  `numero_telefone` CHAR(11),
-  `data_deletado`   DATETIME NOT NULL
-) ENGINE=InnoDB;
+  `ID_extrainfo` int NOT NULL AUTO_INCREMENT,
+  `link_insta` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `link_facebook` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `link_github` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `link_pinterest` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `numero_telefone` char(11) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `ID_user` int NOT NULL,
+  `data_deletado` datetime NOT NULL,
+  PRIMARY KEY (`ID_extrainfo`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 
+--
+-- Table structure for table `projeto`
+--
+
+DROP TABLE IF EXISTS `projeto`;
+/*!40101 SET @saved_cs_client      = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `projeto` (
+  `ID_projeto` int NOT NULL AUTO_INCREMENT,
+  `titulo` varchar(150) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `descricao` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `total_curtidas` int DEFAULT '0',
+  `criado_em` datetime NOT NULL,
+  `ID_user` int NOT NULL,
+  PRIMARY KEY (`ID_projeto`),
+  KEY `fk_projeto_user` (`ID_user`),
+  CONSTRAINT `fk_projeto_user` FOREIGN KEY (`ID_user`) REFERENCES `usuario` (`ID_user`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `projeto_log`
+--
+
+DROP TABLE IF EXISTS `projeto_log`;
+/*!40101 SET @saved_cs_client      = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `projeto_log` (
+  `ID_projeto` int NOT NULL AUTO_INCREMENT,
+  `titulo` varchar(150) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `descricao` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `data_deletado` datetime NOT NULL,
+  `ID_user` int NOT NULL,
+  PRIMARY KEY (`ID_projeto`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `imagens`
+--
+
+DROP TABLE IF EXISTS `imagens`;
+/*!40101 SET @saved_cs_client      = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `imagens` (
+  `ID_imagem` int NOT NULL AUTO_INCREMENT,
+  `imagem` longblob NOT NULL,
+  `tipo_imagem` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `ordem` int NOT NULL,
+  `ID_projeto` int NOT NULL,
+  PRIMARY KEY (`ID_imagem`),
+  KEY `fk_imagens_projeto` (`ID_projeto`),
+  CONSTRAINT `fk_imagens_projeto` FOREIGN KEY (`ID_projeto`) REFERENCES `projeto` (`ID_projeto`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `imagens_log`
+--
+
+DROP TABLE IF EXISTS `imagens_log`;
+/*!40101 SET @saved_cs_client      = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `imagens_log` (
+  `ID_imagem` int NOT NULL AUTO_INCREMENT,
+  `imagem` longblob NOT NULL,
+  `data_deletado` datetime NOT NULL,
+  `ID_projeto` int NOT NULL,
+  PRIMARY KEY (`ID_imagem`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `curtidas`
+--
+
+DROP TABLE IF EXISTS `curtidas`;
+/*!40101 SET @saved_cs_client      = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `curtidas` (
+  `ID_curtida` int NOT NULL AUTO_INCREMENT,
+  `ID_user` int NOT NULL,
+  `ID_projeto` int NOT NULL,
+  PRIMARY KEY (`ID_curtida`),
+  KEY `ID_user` (`ID_user`),
+  KEY `ID_projeto` (`ID_projeto`),
+  CONSTRAINT `curtidas_ibfk_1` FOREIGN KEY (`ID_user`) REFERENCES `usuario` (`ID_user`),
+  CONSTRAINT `curtidas_ibfk_2` FOREIGN KEY (`ID_projeto`) REFERENCES `projeto` (`ID_projeto`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `code_validacao`
+--
+
+DROP TABLE IF EXISTS `code_validacao`;
+/*!40101 SET @saved_cs_client      = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `code_validacao` (
+  `code` char(6) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `code_expira_em` datetime NOT NULL,
+  `ID_user` int NOT NULL,
+  PRIMARY KEY (`code`),
+  KEY `fk_code_user` (`ID_user`),
+  KEY `ix_code_expira` (`code_expira_em`),
+  CONSTRAINT `fk_code_user` FOREIGN KEY (`ID_user`) REFERENCES `usuario` (`ID_user`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `code_validacao_log`
+--
+
+DROP TABLE IF EXISTS `code_validacao_log`;
+/*!40101 SET @saved_cs_client      = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `code_validacao_log` (
-  `code`           CHAR(6) PRIMARY KEY,
-  `code_expira_em` DATETIME NOT NULL,
-  `data_deletado`  DATETIME NOT NULL
-) ENGINE=InnoDB;
+  `code` char(6) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `code_expira_em` datetime NOT NULL,
+  `data_deletado` datetime NOT NULL,
+  PRIMARY KEY (`code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 
--- ========= TRIGGERS =========
-DELIMITER //
+--
+-- Dumping data for tables
+--
+-- Note: It is best practice to move the LOCK and UNLOCK statements here,
+-- after all tables have been defined.
+--
 
--- Log do usuário após deletar
-DROP TRIGGER IF EXISTS trg_usuario_to_user_log//
-CREATE TRIGGER trg_usuario_to_user_log
-AFTER DELETE ON `usuario`
-FOR EACH ROW
-BEGIN
-  INSERT INTO `user_log` (
-    `ID_user`, `email`, `autenticado`, `imagem_user`, `biografia`, `senha`, `plano`, `username`, `name`, `criado_em`, `data_deletado`
-  ) VALUES (
-    OLD.`ID_user`, OLD.`email`, OLD.`autenticado`, OLD.`imagem_user`, OLD.`biografia`, OLD.`senha`, OLD.`plano`, OLD.`username`, OLD.`name`, OLD.`criado_em`,
+LOCK TABLES `usuario` WRITE;
+/*!40000 ALTER TABLE `usuario` DISABLE KEYS */;
+/*!40000 ALTER TABLE `usuario` ENABLE KEYS */;
+UNLOCK TABLES;
+
+LOCK TABLES `usuario_log` WRITE;
+/*!40000 ALTER TABLE `usuario_log` DISABLE KEYS */;
+/*!40000 ALTER TABLE `usuario_log` ENABLE KEYS */;
+UNLOCK TABLES;
+
+LOCK TABLES `code_validacao` WRITE;
+/*!40000 ALTER TABLE `code_validacao` DISABLE KEYS */;
+/*!40000 ALTER TABLE `code_validacao` ENABLE KEYS */;
+UNLOCK TABLES;
+
+LOCK TABLES `code_validacao_log` WRITE;
+/*!40000 ALTER TABLE `code_validacao_log` DISABLE KEYS */;
+/*!40000 ALTER TABLE `code_validacao_log` ENABLE KEYS */;
+UNLOCK TABLES;
+
+LOCK TABLES `curtidas` WRITE;
+/*!40000 ALTER TABLE `curtidas` DISABLE KEYS */;
+/*!40000 ALTER TABLE `curtidas` ENABLE KEYS */;
+UNLOCK TABLES;
+
+LOCK TABLES `extrainfo` WRITE;
+/*!40000 ALTER TABLE `extrainfo` DISABLE KEYS */;
+/*!40000 ALTER TABLE `extrainfo` ENABLE KEYS */;
+UNLOCK TABLES;
+
+LOCK TABLES `extrainfo_log` WRITE;
+/*!40000 ALTER TABLE `extrainfo_log` DISABLE KEYS */;
+/*!40000 ALTER TABLE `extrainfo_log` ENABLE KEYS */;
+UNLOCK TABLES;
+
+LOCK TABLES `imagens` WRITE;
+/*!40000 ALTER TABLE `imagens` DISABLE KEYS */;
+/*!40000 ALTER TABLE `imagens` ENABLE KEYS */;
+UNLOCK TABLES;
+
+LOCK TABLES `imagens_log` WRITE;
+/*!40000 ALTER TABLE `imagens_log` DISABLE KEYS */;
+/*!40000 ALTER TABLE `imagens_log` ENABLE KEYS */;
+UNLOCK TABLES;
+
+LOCK TABLES `projeto` WRITE;
+/*!40000 ALTER TABLE `projeto` DISABLE KEYS */;
+/*!40000 ALTER TABLE `projeto` ENABLE KEYS */;
+UNLOCK TABLES;
+
+LOCK TABLES `projeto_log` WRITE;
+/*!40000 ALTER TABLE `projeto_log` DISABLE KEYS */;
+/*!40000 ALTER TABLE `projeto_log` ENABLE KEYS */;
+UNLOCK TABLES;
+
+
+--
+-- Dumping events for database 'conectalento'
+--
+/*!50106 SET @save_time_zone= @@TIME_ZONE */ ;
+/*!50106 DROP EVENT IF EXISTS `ev_purge_code_validacao` */;
+DELIMITER ;;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;;
+/*!50003 SET character_set_client  = utf8mb3 */ ;;
+/*!50003 SET character_set_results = utf8mb3 */ ;;
+/*!50003 SET collation_connection  = utf8mb3_general_ci */ ;;
+/*!50003 SET @saved_sql_mode      = @@sql_mode */ ;;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;;
+/*!50003 SET @saved_time_zone      = @@time_zone */ ;;
+/*!50003 SET time_zone             = 'SYSTEM' */ ;;
+/*!50106 CREATE*/ /*!50117 DEFINER=`alunods`@`%`*/ /*!50106 EVENT `ev_purge_code_validacao` ON SCHEDULE EVERY 1 MINUTE STARTS '2025-09-10 14:32:42' ON COMPLETION PRESERVE ENABLE DO BEGIN
+  -- 1) registra no log tudo que venceu
+  INSERT INTO `code_validacao_log` (`code`, `code_expira_em`, `data_deletado`)
+  SELECT `code`, `code_expira_em`, NOW()
+  FROM `code_validacao`
+  WHERE `code_expira_em` <= NOW();
+
+  -- 2) remove os vencidos
+  DELETE FROM `code_validacao`
+  WHERE `code_expira_em` <= NOW();
+END */ ;;
+/*!50003 SET time_zone             = @saved_time_zone */ ;;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;;
+/*!50003 SET character_set_results = @saved_cs_results */ ;;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;;
+/*!50106 DROP EVENT IF EXISTS `ev_purge_unverified_users` */;;
+DELIMITER ;;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;;
+/*!50003 SET character_set_client  = utf8mb3 */ ;;
+/*!50003 SET character_set_results = utf8mb3 */ ;;
+/*!50003 SET collation_connection  = utf8mb3_general_ci */ ;;
+/*!50003 SET @saved_sql_mode      = @@sql_mode */ ;;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;;
+/*!50003 SET @saved_time_zone      = @@time_zone */ ;;
+/*!50003 SET time_zone             = 'SYSTEM' */ ;;
+/*!50106 CREATE*/ /*!50117 DEFINER=`alunods`@`%`*/ /*!50106 EVENT `ev_purge_unverified_users` ON SCHEDULE EVERY 1 MINUTE STARTS '2025-09-10 14:31:42' ON COMPLETION PRESERVE ENABLE DO BEGIN
+  DELETE FROM `usuario`
+  WHERE `autenticado` = FALSE
+    AND `criado_em` <= NOW() - INTERVAL 1 HOUR;
+  -- O DELETE aciona sua trigger e registra no user_log.
+END */ ;;
+/*!50003 SET time_zone             = @saved_time_zone */ ;;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;;
+/*!50003 SET character_set_results = @saved_cs_results */ ;;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;;
+DELIMITER ;
+/*!50106 SET TIME_ZONE= @save_time_zone */ ;
+
+--
+-- Dumping routines for database 'conectalento'
+--
+/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
+
+/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
+/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
+/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
+
+-- Triggers at the end
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb3 */ ;
+/*!50003 SET character_set_results = utf8mb3 */ ;
+/*!50003 SET collation_connection  = utf8mb3_general_ci */ ;
+/*!50003 SET @saved_sql_mode      = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`alunods`@`%`*/ /*!50003 TRIGGER `trg_usuario_log_extrainfo_cascade` BEFORE DELETE ON `usuario` FOR EACH ROW BEGIN
+  INSERT INTO `extrainfo_log` (
+    `ID_extrainfo`, `link_insta`, `link_facebook`, `link_github`,
+    `link_pinterest`, `numero_telefone`, `data_deletado`
+  )
+  SELECT e.`ID_extrainfo`, e.`link_insta`, e.`link_facebook`, e.`link_github`,
+          e.`link_pinterest`, e.`numero_telefone`, NOW()
+  FROM `extrainfo` AS e
+  WHERE e.`ID_user` = OLD.`ID_user`;
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb3 */ ;
+/*!50003 SET character_set_results = utf8mb3 */ ;
+/*!50003 SET collation_connection  = utf8mb3_general_ci */ ;
+/*!50003 SET @saved_sql_mode      = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`alunods`@`%`*/ /*!50003 TRIGGER `trg_usuario_to_user_log` AFTER DELETE ON `usuario` FOR EACH ROW BEGIN
+  INSERT INTO user_log (
+    ID_user, email, autenticado, biografia, senha, plano, username, criado_em, data_deletado
+  )
+  VALUES (
+    OLD.ID_user, OLD.email, OLD.autenticado, OLD.biografia, OLD.senha, OLD.plano, OLD.username, OLD.criado_em,
     NOW()
   );
-END//
-  
--- Antes de deletar um PROJETO, registra suas imagens (quando o delete é direto no projeto)
-DROP TRIGGER IF EXISTS trg_projeto_log_imagens_cascade//
-CREATE TRIGGER trg_projeto_log_imagens_cascade
-BEFORE DELETE ON `projeto`
-FOR EACH ROW
-BEGIN
-  INSERT INTO `imagens_log` (`ID_imagem`, `imagem`, `data_deletado`)
-  SELECT i.`ID_imagem`, i.`imagem`, NOW()
-  FROM `imagens` AS i
-  WHERE i.`ID_projeto` = OLD.`ID_projeto`;
-END//
-
--- Após deletar PROJETO, registra o próprio projeto_log (quando o delete é direto no projeto)
-DROP TRIGGER IF EXISTS trg_projeto_to_projeto_log//
-CREATE TRIGGER trg_projeto_to_projeto_log
-AFTER DELETE ON `projeto`
-FOR EACH ROW
-BEGIN
-  INSERT INTO `projeto_log` (`ID_projeto`, `titulo`, `descricao`, `data_deletado`)
-  VALUES (OLD.`ID_projeto`, OLD.`titulo`, OLD.`descricao`, NOW());
-END//
-
--- Após deletar IMAGEM diretamente, registra no log
-DROP TRIGGER IF EXISTS trg_imagens_to_imagens_log//
-CREATE TRIGGER trg_imagens_to_imagens_log
-AFTER DELETE ON `imagens`
-FOR EACH ROW
-BEGIN
-  INSERT INTO `imagens_log` (`ID_imagem`, `imagem`, `data_deletado`)
-  VALUES (OLD.`ID_imagem`, OLD.`imagem`, NOW());
-END//
-
--- Após deletar EXTRAINFO diretamente, registra no log
-DROP TRIGGER IF EXISTS trg_extrainfo_to_extrainfo_log//
-CREATE TRIGGER trg_extrainfo_to_extrainfo_log
-AFTER DELETE ON `extrainfo`
-FOR EACH ROW
-BEGIN
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb3 */ ;
+/*!50003 SET character_set_results = utf8mb3 */ ;
+/*!50003 SET collation_connection  = utf8mb3_general_ci */ ;
+/*!50003 SET @saved_sql_mode      = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`alunods`@`%`*/ /*!50003 TRIGGER `trg_extrainfo_to_extrainfo_log` AFTER DELETE ON `extrainfo` FOR EACH ROW BEGIN
   INSERT INTO `extrainfo_log` (
     `ID_extrainfo`, `link_insta`, `link_facebook`, `link_github`,
     `link_pinterest`, `numero_telefone`, `data_deletado`
@@ -173,85 +412,73 @@ BEGIN
     OLD.`ID_extrainfo`, OLD.`link_insta`, OLD.`link_facebook`, OLD.`link_github`,
     OLD.`link_pinterest`, OLD.`numero_telefone`, NOW()
   );
-END//
-
--- ===== Log de CASCADE quando deletar USUÁRIO =====
--- (FK cascade não dispara triggers nas tabelas filhas, então registramos aqui)
-
--- Loga EXTRAINFOS que serão apagados em cascata
-DROP TRIGGER IF EXISTS trg_usuario_log_extrainfo_cascade//
-CREATE TRIGGER trg_usuario_log_extrainfo_cascade
-BEFORE DELETE ON `usuario`
-FOR EACH ROW
-BEGIN
-  INSERT INTO `extrainfo_log` (
-    `ID_extrainfo`, `link_insta`, `link_facebook`, `link_github`,
-    `link_pinterest`, `numero_telefone`, `data_deletado`
-  )
-  SELECT e.`ID_extrainfo`, e.`link_insta`, e.`link_facebook`, e.`link_github`,
-         e.`link_pinterest`, e.`numero_telefone`, NOW()
-  FROM `extrainfo` AS e
-  WHERE e.`ID_user` = OLD.`ID_user`;
-END//
-
--- Loga PROJETOS que serão apagados em cascata
-DROP TRIGGER IF EXISTS trg_usuario_log_projetos_cascade//
-CREATE TRIGGER trg_usuario_log_projetos_cascade
-BEFORE DELETE ON `usuario`
-FOR EACH ROW
-BEGIN
-  INSERT INTO `projeto_log` (`ID_projeto`, `titulo`, `descricao`, `data_deletado`)
-  SELECT p.`ID_projeto`, p.`titulo`, p.`descricao`, NOW()
-  FROM `projeto` AS p
-  WHERE p.`ID_user` = OLD.`ID_user`;
-END//
-
--- Loga IMAGENS dos projetos do usuário que serão apagadas em cascata
-DROP TRIGGER IF EXISTS trg_usuario_log_imagens_cascade//
-CREATE TRIGGER trg_usuario_log_imagens_cascade
-BEFORE DELETE ON `usuario`
-FOR EACH ROW
-BEGIN
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb3 */ ;
+/*!50003 SET character_set_results = utf8mb3 */ ;
+/*!50003 SET collation_connection  = utf8mb3_general_ci */ ;
+/*!50003 SET @saved_sql_mode      = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`alunods`@`%`*/ /*!50003 TRIGGER `trg_imagens_to_imagens_log` AFTER DELETE ON `imagens` FOR EACH ROW BEGIN
+  INSERT INTO `imagens_log` (
+    `ID_imagem`, `imagem`, `data_deletado`
+  ) VALUES (
+    OLD.`ID_imagem`, OLD.`imagem`, NOW()
+  );
+END */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb3 */ ;
+/*!50003 SET character_set_results = utf8mb3 */ ;
+/*!50003 SET collation_connection  = utf8mb3_general_ci */ ;
+/*!50003 SET @saved_sql_mode      = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`alunods`@`%`*/ /*!50003 TRIGGER `trg_projeto_log_imagens_cascade` BEFORE DELETE ON `projeto` FOR EACH ROW BEGIN
   INSERT INTO `imagens_log` (`ID_imagem`, `imagem`, `data_deletado`)
   SELECT i.`ID_imagem`, i.`imagem`, NOW()
   FROM `imagens` AS i
-  INNER JOIN `projeto` AS p ON p.`ID_projeto` = i.`ID_projeto`
-  WHERE p.`ID_user` = OLD.`ID_user`;
-END//
-
+  WHERE i.`ID_projeto` = OLD.`ID_projeto`;
+END */;;
 DELIMITER ;
-
--- ======= EVENTS ======
-SET GLOBAL event_scheduler = ON;
-
-DELIMITER //
-
--- Remove códigos vencidos e registra no log
-CREATE EVENT IF NOT EXISTS ev_purge_code_validacao
-ON SCHEDULE EVERY 1 MINUTE
-STARTS CURRENT_TIMESTAMP + INTERVAL 1 MINUTE
-ON COMPLETION PRESERVE
-DO
-BEGIN
-  INSERT INTO `code_validacao_log` (`code`, `code_expira_em`, `data_deletado`)
-  SELECT `code`, `code_expira_em`, NOW()
-  FROM `code_validacao`
-  WHERE `code_expira_em` <= NOW();
-
-  DELETE FROM `code_validacao`
-  WHERE `code_expira_em` <= NOW();
-END//
-
--- Remove usuários não verificados após 1 hora (triggers acima garantem os logs)
-DROP EVENT IF EXISTS ev_purge_unverified_users//
-CREATE EVENT ev_purge_unverified_users
-ON SCHEDULE EVERY 1 MINUTE
-ON COMPLETION PRESERVE
-DO
-BEGIN
-  DELETE FROM `usuario`
-  WHERE `autenticado` = FALSE
-    AND `criado_em` <= NOW() - INTERVAL 1 HOUR;
-END//
-
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb3 */ ;
+/*!50003 SET character_set_results = utf8mb3 */ ;
+/*!50003 SET collation_connection  = utf8mb3_general_ci */ ;
+/*!50003 SET @saved_sql_mode      = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`alunods`@`%`*/ /*!50003 TRIGGER `trg_projeto_to_projeto_log` AFTER DELETE ON `projeto` FOR EACH ROW BEGIN
+  INSERT INTO `projeto_log` (
+    `ID_projeto`, `titulo`, `descricao`, `data_deletado`
+  ) VALUES (
+    OLD.`ID_projeto`, OLD.`titulo`, OLD.`descricao`, NOW()
+  );
+END */;;
 DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+
+-- Dump completed on 2025-09-17 13:09:38

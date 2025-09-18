@@ -1,51 +1,82 @@
-
 const connect = require("../db/connect"); // Ajuste o caminho da sua conexão
 
 module.exports = class projectController {
   // CREATE
   static async createProject(req, res) {
-    const ID_user = req.params;
-    const {titulo, descricao } = req.body;
-    const imagens = req.files; // várias imagens
-  
-    if (!titulo || !descricao || !imagens) {
-      return res.status(400).json({ error: "Todos os campos devem ser preenchidos e pelo menos uma imagem deve ser enviada" });
+    const { ID_user } = req.params;
+    const { titulo, descricao } = req.body;
+    const imagens = req.files;
+
+    if (!titulo || !descricao || !imagens || imagens.length === 0) {
+      return res
+        .status(400)
+        .json({
+          error:
+            "Todos os campos devem ser preenchidos e pelo menos uma imagem deve ser enviada.",
+        });
     }
-    
-    if(imagens.length > 5){
-      return res.status(400).json({ error: "Você só pode inserir 5 imagens por projeto" });
+
+    if (imagens.length > 5) {
+      return res
+        .status(400)
+        .json({ error: "Você só pode inserir 5 imagens por projeto." });
     }
 
     try {
-      const queryProjeto = `INSERT INTO projeto (ID_user, titulo, descricao) VALUES (?, ?, ?)`;
-      connect.query(queryProjeto, [ID_user, titulo, descricao], (err, result) => {
-        if (err) {
-          console.error(err);
-          return res.status(500).json({ error: "Erro ao criar projeto" });
-        }
-  
-        const projetoId = result.insertId;
-  
-        imagens.forEach((img, index) => {
-          const ordem = index + 1;
-          const queryImagem = `INSERT INTO imagens (imagem, ID_projeto, ordem) VALUES (?, ?, ?)`;
-          connect.query(queryImagem, [img.buffer, projetoId, ordem], (err) => {
-            if (err) console.error("Erro ao salvar imagem:", err);
+      const queryProjeto = `INSERT INTO projeto (ID_user, titulo, descricao, criado_em) VALUES (?, ?, ?, NOW())`;
+      connect.query(
+        queryProjeto,
+        [ID_user, titulo, descricao],
+        (err, result) => {
+          if (err) {
+            console.error(err);
+            return res.status(500).json({ error: "Erro ao criar projeto." });
+          }
+
+          const projetoId = result.insertId;
+
+          const promises = imagens.map((img, index) => {
+            const ordem = index + 1;
+            const tipoImagem = img.mimetype; // Pega o tipo de arquivo automaticamente
+            const queryImagem = `INSERT INTO imagens (imagem, tipo_imagem, ID_projeto, ordem) VALUES (?, ?, ?, ?)`;
+
+            return new Promise((resolve, reject) => {
+              connect.query(
+                queryImagem,
+                [img.buffer, tipoImagem, projetoId, ordem],
+                (err) => {
+                  if (err) {
+                    console.error("Erro ao salvar imagem:", err);
+                    reject(err);
+                  } else {
+                    resolve();
+                  }
+                }
+              );
+            });
           });
-        });
-  
-        return res.status(201).json({
-          message: "Projeto criado com sucesso",
-          projetoId,
-        });
-      });
+
+          Promise.all(promises)
+            .then(() => {
+              return res.status(201).json({
+                message: "Projeto criado com sucesso e imagens salvas!",
+                projetoId,
+              });
+            })
+            .catch((error) => {
+              console.error("Erro ao salvar uma ou mais imagens:", error);
+              // Opcional: Aqui você pode adicionar lógica para apagar o projeto recém-criado se a inserção das imagens falhar.
+              return res
+                .status(500)
+                .json({ error: "Erro ao salvar as imagens." });
+            });
+        }
+      );
     } catch (error) {
       console.error(error);
-      return res.status(500).json({ error: "Erro no servidor" });
+      return res.status(500).json({ error: "Erro no servidor." });
     }
   }
-  
-  
 
   // READ ALL
   static async getAllProjects(req, res) {
@@ -93,7 +124,7 @@ module.exports = class projectController {
 
   // UPDATE
   static async updateProject(req, res) {
-    const { id_projeto} = req.params;
+    const { id_projeto } = req.params;
     const { titulo, descricao } = req.body;
 
     if (!id_projeto || !titulo || !descricao) {
@@ -114,7 +145,9 @@ module.exports = class projectController {
           return res.status(404).json({ error: "Projeto não encontrado" });
         }
 
-        return res.status(200).json({ message: "Projeto atualizado com sucesso" });
+        return res
+          .status(200)
+          .json({ message: "Projeto atualizado com sucesso" });
       });
     } catch (error) {
       console.error(error);
@@ -140,7 +173,9 @@ module.exports = class projectController {
           return res.status(404).json({ error: "Projeto não encontrado" });
         }
 
-        return res.status(200).json({ message: "Projeto deletado com sucesso" });
+        return res
+          .status(200)
+          .json({ message: "Projeto deletado com sucesso" });
       });
     } catch (error) {
       console.error(error);

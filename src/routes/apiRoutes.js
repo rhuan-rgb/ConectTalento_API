@@ -16,7 +16,7 @@ router.get("/user/:user", userController.getUserByName);
 
 //Rotas projetoController
 router.post('/project', projectController.createProject);
-router.post("/project", upload.array("imagens"), projectController.createProject);
+router.post("/project/:ID_user", upload.array("imagens"), projectController.createProject);
 router.get("/projects", projectController.getAllProjects);
 router.get("/project/:id", projectController.getProjectByIdUser);
 router.put("/project/:id", projectController.updateProject);
