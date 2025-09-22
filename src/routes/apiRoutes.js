@@ -21,6 +21,9 @@ router.get("/projects", projectController.getAllProjects);
 router.get("/project/:id", projectController.getProjectByIdUser);
 router.put("/project/:id", projectController.updateProject);
 router.delete("/project/:id", projectController.deleteProject);
+router.get("/project/image_ordem/:id_projeto", projectController.getImagemProjeto);
+router.get("/project/images/:id_projeto", projectController.getAllImagesByProjectId); 
+
 
 
 module.exports = router;

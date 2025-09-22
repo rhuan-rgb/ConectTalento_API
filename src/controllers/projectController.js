@@ -8,12 +8,10 @@ module.exports = class projectController {
     const imagens = req.files;
 
     if (!titulo || !descricao || !imagens || imagens.length === 0) {
-      return res
-        .status(400)
-        .json({
-          error:
-            "Todos os campos devem ser preenchidos e pelo menos uma imagem deve ser enviada.",
-        });
+      return res.status(400).json({
+        error:
+          "Todos os campos devem ser preenchidos e pelo menos uma imagem deve ser enviada.",
+      });
     }
 
     if (imagens.length > 5) {
@@ -59,13 +57,12 @@ module.exports = class projectController {
           Promise.all(promises)
             .then(() => {
               return res.status(201).json({
-                message: "Projeto criado com sucesso e imagens salvas!",
+                message: "Projeto criado com sucesso!",
                 projetoId,
               });
             })
             .catch((error) => {
-              console.error("Erro ao salvar uma ou mais imagens:", error);
-              // Opcional: Aqui você pode adicionar lógica para apagar o projeto recém-criado se a inserção das imagens falhar.
+              console.error("Erro ao salvar", error);
               return res
                 .status(500)
                 .json({ error: "Erro ao salvar as imagens." });
@@ -176,6 +173,75 @@ module.exports = class projectController {
         return res
           .status(200)
           .json({ message: "Projeto deletado com sucesso" });
+      });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ error: "Erro no servidor" });
+    }
+  }
+
+  static async getImagemProjeto(req, res) {
+    const { id_projeto } = req.params; 
+
+    if (!id_projeto) {
+      return res.status(400).json({ error: "ID do projeto é obrigatório" });
+    }
+
+    try {
+      const query = `
+        SELECT imagem 
+        FROM imagens 
+        WHERE ID_projeto = ? AND ordem = 1
+      `; 
+
+      connect.query(query, [id_projeto], (err, results) => {
+        if (err) {
+          console.error(err);
+          return res.status(500).json({ error: "Erro ao buscar imagem" });
+        }
+
+        if (results.length === 0 || !results[0].imagem) {
+          return res.status(404).send("Imagem não encontrada");
+        }
+
+        res.set("Content-Type", "image/jpg");
+        res.send(results[0].imagem);
+      });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ error: "Erro no servidor" });
+    }
+  }
+
+
+  // GetAllImagensByProjetoId 
+
+  static async getAllImagesByProjectId(req, res) {
+    const { id_projeto } = req.params; 
+
+    if (!id_projeto) {
+      return res.status(400).json({ error: "ID do projeto é obrigatório" });
+    }
+
+    try {
+      const query = `
+        SELECT imagem 
+        FROM imagens 
+        WHERE ID_projeto = ?
+      `; 
+
+      connect.query(query, [id_projeto], (err, results) => {
+        if (err) {
+          console.error(err);
+          return res.status(500).json({ error: "Erro ao buscar imagem" });
+        }
+
+        if (results.length === 0 || !results[0].imagem) {
+          return res.status(404).send("Imagem não encontrada");
+        }
+
+        res.set("Content-Type", "image/jpg");
+        res.send(results[0].imagem);
       });
     } catch (error) {
       console.error(error);
