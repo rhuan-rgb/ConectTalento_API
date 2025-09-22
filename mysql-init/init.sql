@@ -349,9 +349,9 @@ DELIMITER ;
 DELIMITER ;;
 /*!50003 CREATE*/ /*!50017 DEFINER=`alunods`@`%`*/ /*!50003 TRIGGER `trg_projeto_to_projeto_log` AFTER DELETE ON `projeto` FOR EACH ROW BEGIN
   INSERT INTO `projeto_log` (
-    `ID_projeto`, `titulo`, `descrição`, `data_deletado`
+    `ID_projeto`, `titulo`, `descricao`, `data_deletado`
   ) VALUES (
-    OLD.`ID_projeto`, OLD.`titulo`, OLD.`descrição`, NOW()
+    OLD.`ID_projeto`, OLD.`titulo`, OLD.`descricao`, NOW()
   );
 END */;;
 DELIMITER ;
