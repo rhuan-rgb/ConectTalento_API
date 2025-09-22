@@ -418,26 +418,27 @@ module.exports = class userController {
   }
 
   static async getAllLikedProjects(req, res) {
-    const id = req.params.ID_user;
+  const id = req.params.id;
 
-    const query = `SELECT p.*
+  const query = `
+    SELECT p.*
     FROM projeto p
     JOIN curtidas c ON p.ID_projeto = c.ID_projeto
     WHERE c.ID_user = ?
-    ORDER BY p.titulo ASC;`
-    
-    try {
-      connect.query(query, [id],  function (err, results) {
-        if (err) {
-          console.log(err);
-          return res.status(500).json({ error: "erro ao buscar projetos curtidos" });
-        } 
-        res.status(200).json({message: "projetos curtidos pelo usuário fornecido: ", results: results})
-      });
-    } catch (error) {
-      console.log(error);
-      return res.status(500).json({ error: "Erro Interno de Servidor" });
+    ORDER BY p.titulo ASC;
+  `;
+
+  connect.query(query, [id], (err, results) => {
+    if (err) {
+      console.log(err);
+      return res.status(500).json({ error: "erro ao buscar projetos curtidos" });
     }
-  }
+    return res.status(200).json({
+      message: "Projetos curtidos pelo usuário fornecido",
+      results
+    });
+  });
+}
+
   
 };

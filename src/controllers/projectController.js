@@ -48,9 +48,27 @@ module.exports = class projectController {
     }
   }
 
+  static async getAllProjectsOrderByTotalLikes(req, res) {
+    try {
+      const query = `SELECT * FROM projeto ORDER BY total_curtidas DESC;`;
+
+      connect.query(query, (err, results) => {
+        if (err) {
+          console.error(err);
+          return res.status(500).json({ error: "Erro ao buscar projetos" });
+        }
+
+        return res.status(200).json(results);
+      });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ error: "Erro no servidor" });
+    }
+  }
+
   // READ ONE
   static async getProjectByIdUser(req, res) {
-    const { id_usuario } = req.params;
+    const { id_usuario } = req.params.id;
 
     if (!id_usuario) return res.status(400).json({ error: "ID é obrigatório" });
 
@@ -139,38 +157,37 @@ module.exports = class projectController {
     const { ID_projeto, ID_user } = req.body;
 
     let query = `SELECT * FROM curtidas WHERE ID_projeto = ? AND ID_user = ?;`;
-    connect.query(query, ID_projeto, ID_user, (err, results) => {
+    connect.query(query, [ID_projeto, ID_user], (err, results) => {
       if (err) {
         console.log(err);
         return res.status(400).json({ error: "erro ao buscar em curtidas" });
       }
-      if (results > 0) {
+
+      if (results.length > 0) {
+        // Já existe curtida -> deletar
         query = `DELETE FROM curtidas WHERE ID_projeto = ? AND ID_user = ?;`;
         connect.query(query, [ID_projeto, ID_user], (err, results) => {
           if (err) {
             console.log(err);
             return res.status(400).json({ error: "erro ao deletar a curtida" });
           }
-          return res
-            .status(200)
-            .json({
-              message: "curtida deletada com sucesso.",
-              results: results,
-            });
+          return res.status(200).json({
+            message: "curtida deletada com sucesso.",
+            curtido: false,
+          });
         });
       } else {
+        // Não existe curtida -> inserir
         query = `INSERT INTO curtidas (ID_projeto, ID_user) VALUES (?, ?);`;
         connect.query(query, [ID_projeto, ID_user], (err, results) => {
           if (err) {
             console.log(err);
             return res.status(400).json({ error: "erro ao inserir a curtida" });
           }
-          return res
-            .status(200)
-            .json({
-              message: "curtida inserida com sucesso.",
-              results: results,
-            });
+          return res.status(200).json({
+            message: "curtida inserida com sucesso.",
+            curtido: true,
+          });
         });
       }
     });

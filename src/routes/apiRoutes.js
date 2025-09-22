@@ -21,8 +21,9 @@ router.get("/user/:user", userController.getUserByName);
 //Rotas projetoController
 router.post('/project', projectController.createProject);
 router.get("/projects", projectController.getAllProjects);
+router.get("/projects/like", projectController.getAllProjectsOrderByTotalLikes);
 router.get("/project/:id", projectController.getProjectByIdUser);
-// router.get("/project/total_likes", projectController.get_All_Projects_Order_By_Likes);
+router.post("/project/like", projectController.like_or_dislike_projects);
 router.put("/project/:id", projectController.updateProject);
 router.delete("/project/:id", projectController.deleteProject);
 
