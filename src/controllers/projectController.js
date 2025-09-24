@@ -94,8 +94,8 @@ module.exports = class projectController {
 
   // UPDATE
   static async updateProject(req, res) {
-    const { id_projeto } = req.params;
-    const { titulo, descricao } = req.body;
+    const  id_projeto  = req.params.id;
+    const { titulo, descricao, imagens} = req.body;
 
     if (!id_projeto || !titulo || !descricao) {
       return res
@@ -104,7 +104,7 @@ module.exports = class projectController {
     }
 
     try {
-      const query = `UPDATE projeto SET titulo = ?, descricao = ? WHERE id_projeto = ?`;
+      const query = `UPDATE projeto SET titulo = ?, descricao = ? WHERE ID_projeto = ?`;
       connect.query(query, [titulo, descricao, id_projeto], (err, result) => {
         if (err) {
           console.error(err);
@@ -123,17 +123,54 @@ module.exports = class projectController {
       console.error(error);
       return res.status(500).json({ error: "Erro no servidor" });
     }
+    if(imagens){
+      let img_banco;
+      let imagem_update_res = []
+      let imagem_insert_res = []
+      try{
+        imagens.forEach((img) =>{
+          let query = `SELECT * FROM imagens WHERE ID_imagem = ?;`
+          connect.query(query, [img.ID_imagem], (err, results)=>{
+            if(err){
+              return res.status(400).json({error: "erro ao encontrar imagem: ", err})
+            }
+            if(results.lenght > 0){
+              if(results.ordem !== img.ordem){
+                query = `UPDATE imagem SET ordem = ? WHERE ID_imagem = ?;`
+                connect.query(query, [img.ordem, img.ID_imagem], (err, results) =>{
+                  if(err){
+                    return res.status(400).json({error: "erro ao atualizar a ordem da imagem: ", err})
+                  }
+                  // retorna o relatório de cada imagem alterada.
+                  imagem_update_res.push({ID_imagem: img.ID_imagem, info: results.info});
+                })
+              }
+            } else {
+              query = `INSERT INTO imagem (imagem, tipo_imagem, ordem, ID_projeto) VALUES (?, ?, ?, ?)`
+              connect.query(query, [img.imagem, img.tipo_imagem, img.ordem, img.ID_projeto], (err, results) =>{
+                if(err){
+                  return res.status(400).json({error:"erro ao inserir imagem no banco: ", err})
+                }
+                imagem_insert_res.push({info: results.info});
+              })
+            }
+          })
+        })
+      } catch {
+
+      }
+    }
   }
 
   // DELETE
   static async deleteProject(req, res) {
-    const { id_projeto } = req.params;
+    const id  = req.params.id;
 
-    if (!id_projeto) return res.status(400).json({ error: "ID é obrigatório" });
+    if (!id) return res.status(400).json({ error: "ID é obrigatório" });
 
     try {
-      const query = `DELETE FROM projeto WHERE id_projeto = ?`;
-      connect.query(query, [id_projeto], (err, result) => {
+      const query = `DELETE FROM projeto WHERE ID_projeto = ?`;
+      connect.query(query, [id], (err, result) => {
         if (err) {
           console.error(err);
           return res.status(500).json({ error: "Erro ao deletar projeto" });
@@ -192,4 +229,6 @@ module.exports = class projectController {
       }
     });
   }
+
+  
 };
