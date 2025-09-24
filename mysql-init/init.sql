@@ -82,8 +82,8 @@ CREATE TABLE `curtidas` (
   PRIMARY KEY (`ID_curtida`),
   KEY `ID_user` (`ID_user`),
   KEY `ID_projeto` (`ID_projeto`),
-  CONSTRAINT `curtidas_ibfk_1` FOREIGN KEY (`ID_user`) REFERENCES `usuario` (`ID_user`),
-  CONSTRAINT `curtidas_ibfk_2` FOREIGN KEY (`ID_projeto`) REFERENCES `projeto` (`ID_projeto`)
+  CONSTRAINT `curtidas_ibfk_1` FOREIGN KEY (`ID_user`) REFERENCES `usuario` (`ID_user`) ON DELETE CASCADE,
+  CONSTRAINT `curtidas_ibfk_2` FOREIGN KEY (`ID_projeto`) REFERENCES `projeto` (`ID_projeto`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -349,9 +349,9 @@ DELIMITER ;
 DELIMITER ;;
 /*!50003 CREATE*/ /*!50017 DEFINER=`alunods`@`%`*/ /*!50003 TRIGGER `trg_projeto_to_projeto_log` AFTER DELETE ON `projeto` FOR EACH ROW BEGIN
   INSERT INTO `projeto_log` (
-    `ID_projeto`, `titulo`, `descricao`, `data_deletado`
+    `ID_projeto`, `titulo`, `descrição`, `data_deletado`
   ) VALUES (
-    OLD.`ID_projeto`, OLD.`titulo`, OLD.`descricao`, NOW()
+    OLD.`ID_projeto`, OLD.`titulo`, OLD.`descrição`, NOW()
   );
 END */;;
 DELIMITER ;
