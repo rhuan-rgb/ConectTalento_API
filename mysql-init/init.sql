@@ -1,259 +1,223 @@
 CREATE DATABASE IF NOT EXISTS conectalento
   DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
 USE conectalento;
 
--- ========= TABELAS =========
-CREATE TABLE `usuario` (
-  `ID_user`     INT PRIMARY KEY AUTO_INCREMENT,
-  `email`       VARCHAR(255) UNIQUE NOT NULL,
-  `autenticado` BOOLEAN      NOT NULL,
-  `imagem_user` LONGBLOB     NULL,
-  `tipo_imagem` VARCHAR(10) NULL,
-  `biografia`   TEXT         NULL,
-  `senha`       VARCHAR(255) NOT NULL,
-  `plano`       BOOLEAN      NOT NULL,
-  `username`    VARCHAR(50)  UNIQUE NOT NULL,
-  `name`        VARCHAR(255) NOT NULL,
-  `criado_em`   DATETIME     NOT NULL,
-  INDEX `ix_auth_criado` (`autenticado`,`criado_em`)
-) ENGINE=InnoDB;
+-- ========================================================
+-- =============== TABELAS PRINCIPAIS =====================
+-- ========================================================
 
-CREATE TABLE `projeto` (
-  `ID_projeto`  INT PRIMARY KEY AUTO_INCREMENT,
-  `titulo`      VARCHAR(150) NOT NULL,
-  `descricao`   VARCHAR(255) NOT NULL,
-  `total_curtidas` INT NULL,
-  `criado_em`   NOT NULL DATETIME,
-  `ID_user`     INT NOT NULL,
-  CONSTRAINT `fk_projeto_user`
-    FOREIGN KEY (`ID_user`) REFERENCES `usuario`(`ID_user`)
-    ON DELETE CASCADE
-) ENGINE=InnoDB;
+-- Usuários
+CREATE TABLE usuario (
+  ID_user      INT PRIMARY KEY AUTO_INCREMENT,
+  email        VARCHAR(255) NOT NULL UNIQUE,
+  autenticado  BOOLEAN NOT NULL,
+  imagem       LONGBLOB,
+  biografia    TEXT,
+  senha        VARCHAR(255) NOT NULL,
+  plano        BOOLEAN NOT NULL,
+  username     VARCHAR(50) NOT NULL UNIQUE,
+  name         VARCHAR(50) NOT NULL,
+  criado_em    DATETIME NOT NULL,
+  KEY ix_auth_criado (autenticado, criado_em)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE `imagens` (
-  `ID_imagem`  INT PRIMARY KEY AUTO_INCREMENT,
-  `imagem`     LONGBLOB NOT NULL,
-  `tipo_imagem` VARCHAR(10) NOT NULL,
-  `ID_projeto` INT      NOT NULL,
-  CONSTRAINT `fk_imagens_projeto`
-    FOREIGN KEY (`ID_projeto`) REFERENCES `projeto`(`ID_projeto`)
-    ON DELETE CASCADE
-) ENGINE=InnoDB;
+-- Projeto
+CREATE TABLE projeto (
+  ID_projeto   INT PRIMARY KEY AUTO_INCREMENT,
+  titulo       VARCHAR(150) NOT NULL,
+  descricao    VARCHAR(255) NOT NULL,
+  total_curtidas INT DEFAULT 0,
+  criado_em    DATETIME NOT NULL,
+  ID_user      INT NOT NULL,
+  CONSTRAINT fk_projeto_user FOREIGN KEY (ID_user) REFERENCES usuario(ID_user) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE `extrainfo` (
-  `ID_extrainfo`    INT PRIMARY KEY AUTO_INCREMENT,
-  `link_insta`      VARCHAR(255),
-  `link_facebook`   VARCHAR(255),
-  `link_github`     VARCHAR(255),
-  `link_pinterest`  VARCHAR(255),
-  `numero_telefone` CHAR(11),
-  `plano`           VARCHAR(255),
-  `ID_user`         INT NOT NULL,
-  CONSTRAINT `fk_extrainfo_user`
-    FOREIGN KEY (`ID_user`) REFERENCES `usuario`(`ID_user`)
-    ON DELETE CASCADE
-) ENGINE=InnoDB;
+-- Curtidas
+CREATE TABLE curtidas (
+  ID_curtida INT PRIMARY KEY AUTO_INCREMENT,
+  ID_user    INT NOT NULL,
+  ID_projeto INT NOT NULL,
+  CONSTRAINT fk_curtida_user    FOREIGN KEY (ID_user) REFERENCES usuario(ID_user),
+  CONSTRAINT fk_curtida_projeto FOREIGN KEY (ID_projeto) REFERENCES projeto(ID_projeto)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE `code_validacao` (
-  `code`           CHAR(6)     PRIMARY KEY,
-  `code_expira_em` DATETIME    NOT NULL,
-  `ID_user`        INT NOT NULL,
-  CONSTRAINT `fk_code_user`
-    FOREIGN KEY (`ID_user`) REFERENCES `usuario`(`ID_user`)
-    ON DELETE CASCADE,
-  INDEX `ix_code_expira` (`code_expira_em`)
-) ENGINE=InnoDB;
+-- Código de validação
+CREATE TABLE code_validacao (
+  code           CHAR(6) NOT NULL PRIMARY KEY,
+  code_expira_em DATETIME NOT NULL,
+  ID_user        INT NOT NULL,
+  KEY ix_code_expira (code_expira_em),
+  CONSTRAINT fk_code_user FOREIGN KEY (ID_user) REFERENCES usuario(ID_user) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ========= LOGS =========
-CREATE TABLE `user_log` (
-  `ID_user`       INT PRIMARY KEY,
-  `email`         VARCHAR(255) NOT NULL,
-  `autenticado`   BOOLEAN      NOT NULL,
-  `imagem_user`   LONGBLOB NULL,
-  `tipo_imagem`   VARCHAR(100) NULL,
-  `biografia`     TEXT         NULL,
-  `senha`         VARCHAR(255) NOT NULL,
-  `plano`         BOOLEAN      NOT NULL,
-  `username`      VARCHAR(50)  NOT NULL,
-  `name`          VARCHAR(255) NOT NULL,
-  `criado_em`     DATETIME     NOT NULL,
-  `data_deletado` DATETIME     NOT NULL
-) ENGINE=InnoDB;
+-- Informações extras do usuário
+CREATE TABLE extrainfo (
+  ID_extrainfo   INT PRIMARY KEY AUTO_INCREMENT,
+  link_insta     VARCHAR(255),
+  link_facebook  VARCHAR(255),
+  link_github    VARCHAR(255),
+  link_pinterest VARCHAR(255),
+  numero_telefone CHAR(11),
+  ID_user        INT NOT NULL,
+  CONSTRAINT fk_extrainfo_user FOREIGN KEY (ID_user) REFERENCES usuario(ID_user) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE `projeto_log` (
-  `ID_projeto`    INT PRIMARY KEY,
-  `titulo`        VARCHAR(150) NOT NULL,
-  `descricao`     VARCHAR(255) NOT NULL,
-  `data_deletado` DATETIME     NOT NULL
-) ENGINE=InnoDB;
+-- Imagens de projetos
+CREATE TABLE imagens (
+  ID_imagem   INT PRIMARY KEY AUTO_INCREMENT,
+  imagem      LONGBLOB NOT NULL,
+  tipo_imagem VARCHAR(100) NOT NULL,
+  ordem       INT NOT NULL,
+  ID_projeto  INT NOT NULL,
+  CONSTRAINT fk_imagens_projeto FOREIGN KEY (ID_projeto) REFERENCES projeto(ID_projeto) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE `imagens_log` (
-  `ID_imagem`     INT PRIMARY KEY,
-  `imagem`        LONGBLOB NOT NULL,
-  `tipo_imagem` VARCHAR(10) NOT NULL,
-  `data_deletado` DATETIME NOT NULL
-) ENGINE=InnoDB;
+-- ========================================================
+-- =============== TABELAS DE LOG =========================
+-- ========================================================
 
-CREATE TABLE `extrainfo_log` (
-  `ID_extrainfo`    INT PRIMARY KEY,
-  `link_insta`      VARCHAR(255),
-  `link_facebook`   VARCHAR(255),
-  `link_github`     VARCHAR(255),
-  `link_pinterest`  VARCHAR(255),
-  `numero_telefone` CHAR(11),
-  `data_deletado`   DATETIME NOT NULL
-) ENGINE=InnoDB;
+-- Log de códigos de validação
+CREATE TABLE code_validacao_log (
+  code           CHAR(6) NOT NULL PRIMARY KEY,
+  code_expira_em DATETIME NOT NULL,
+  data_deletado  DATETIME NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE `code_validacao_log` (
-  `code`           CHAR(6) PRIMARY KEY,
-  `code_expira_em` DATETIME NOT NULL,
-  `data_deletado`  DATETIME NOT NULL
-) ENGINE=InnoDB;
+-- Log de informações extras
+CREATE TABLE extrainfo_log (
+  ID_extrainfo   INT PRIMARY KEY AUTO_INCREMENT,
+  link_insta     VARCHAR(255),
+  link_facebook  VARCHAR(255),
+  link_github    VARCHAR(255),
+  link_pinterest VARCHAR(255),
+  numero_telefone CHAR(11),
+  ID_user        INT NOT NULL,
+  data_deletado  DATETIME NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ========= TRIGGERS =========
-DELIMITER //
+-- Log de imagens
+CREATE TABLE imagens_log (
+  ID_imagem   INT PRIMARY KEY AUTO_INCREMENT,
+  imagem      LONGBLOB NOT NULL,
+  data_deletado DATETIME NOT NULL,
+  ID_projeto  INT NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Log do usuário após deletar
-DROP TRIGGER IF EXISTS trg_usuario_to_user_log//
-CREATE TRIGGER trg_usuario_to_user_log
-AFTER DELETE ON `usuario`
+-- Log de projetos
+CREATE TABLE projeto_log (
+  ID_projeto  INT PRIMARY KEY AUTO_INCREMENT,
+  titulo      VARCHAR(150) NOT NULL,
+  descricao   VARCHAR(255) NOT NULL,
+  data_deletado DATETIME NOT NULL,
+  ID_user     INT NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Log de usuários
+CREATE TABLE usuario_log (
+  ID_user      INT PRIMARY KEY,
+  email        VARCHAR(255) NOT NULL,
+  autenticado  BOOLEAN NOT NULL,
+  imagem       LONGBLOB,
+  biografia    TEXT,
+  senha        VARCHAR(50) NOT NULL,
+  plano        BOOLEAN NOT NULL,
+  username     VARCHAR(50) NOT NULL,
+  criado_em    DATETIME NOT NULL,
+  name         VARCHAR(50) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ========================================================
+-- =============== TRIGGERS ===============================
+-- ========================================================
+
+-- Curtidas
+CREATE TRIGGER adicionar_curtida
+AFTER INSERT ON curtidas
 FOR EACH ROW
 BEGIN
-  INSERT INTO `user_log` (
-    `ID_user`, `email`, `autenticado`, `imagem_user`, `tipo_imagem`, `biografia`, `senha`, `plano`, `username`, `name`, `criado_em`, `data_deletado`
-  ) VALUES (
-    OLD.`ID_user`, OLD.`email`, OLD.`autenticado`, OLD.`imagem_user`, OLD.`tipo_imagem`, OLD.`biografia`, OLD.`senha`, OLD.`plano`, OLD.`username`, OLD.`name`, OLD.`criado_em`,
-    NOW()
-  );
-END//
-  
--- Antes de deletar um PROJETO, registra suas imagens (quando o delete é direto no projeto)
-DROP TRIGGER IF EXISTS trg_projeto_log_imagens_cascade//
-CREATE TRIGGER trg_projeto_log_imagens_cascade
-BEFORE DELETE ON `projeto`
+  UPDATE projeto
+  SET total_curtidas = total_curtidas + 1
+  WHERE ID_projeto = NEW.ID_projeto;
+END;
+
+CREATE TRIGGER remover_curtida
+AFTER DELETE ON curtidas
 FOR EACH ROW
 BEGIN
-  INSERT INTO `imagens_log` (`ID_imagem`, `imagem`, `tipo_imagem`, `data_deletado`)
-  SELECT i.`ID_imagem`, i.`imagem`, i.`tipo_imagem`, NOW()
-  FROM `imagens` AS i
-  WHERE i.`ID_projeto` = OLD.`ID_projeto`;
-END//
+  UPDATE projeto
+  SET total_curtidas = total_curtidas - 1
+  WHERE ID_projeto = OLD.ID_projeto;
+END;
 
-
---REVISAR PARA COLOCAR ID_USER
-
--- Após deletar PROJETO, registra o próprio projeto_log (quando o delete é direto no projeto)
-DROP TRIGGER IF EXISTS trg_projeto_to_projeto_log//
-CREATE TRIGGER trg_projeto_to_projeto_log
-AFTER DELETE ON `projeto`
-FOR EACH ROW
-BEGIN
-  INSERT INTO `projeto_log` (`ID_projeto`, `titulo`, `descricao`, `data_deletado`)
-  VALUES (OLD.`ID_projeto`, OLD.`titulo`, OLD.`descricao`, NOW());
-END//
-
--- Após deletar IMAGEM diretamente, registra no log
-DROP TRIGGER IF EXISTS trg_imagens_to_imagens_log//
-CREATE TRIGGER trg_imagens_to_imagens_log
-AFTER DELETE ON `imagens`
-FOR EACH ROW
-BEGIN
-  INSERT INTO `imagens_log` (`ID_imagem`, `imagem`, `tipo_imagem`, `data_deletado`)
-  VALUES (OLD.`ID_imagem`, OLD.`imagem`, OLD.`tipo_imagem`, NOW());
-END//
-
--- Após deletar EXTRAINFO diretamente, registra no log
-DROP TRIGGER IF EXISTS trg_extrainfo_to_extrainfo_log//
+-- Extrainfo → Log
 CREATE TRIGGER trg_extrainfo_to_extrainfo_log
-AFTER DELETE ON `extrainfo`
+AFTER DELETE ON extrainfo
 FOR EACH ROW
 BEGIN
-  INSERT INTO `extrainfo_log` (
-    `ID_extrainfo`, `link_insta`, `link_facebook`, `link_github`,
-    `link_pinterest`, `numero_telefone`, `data_deletado`
+  INSERT INTO extrainfo_log (
+    ID_extrainfo, link_insta, link_facebook, link_github,
+    link_pinterest, numero_telefone, data_deletado
   ) VALUES (
-    OLD.`ID_extrainfo`, OLD.`link_insta`, OLD.`link_facebook`, OLD.`link_github`,
-    OLD.`link_pinterest`, OLD.`numero_telefone`, NOW()
+    OLD.ID_extrainfo, OLD.link_insta, OLD.link_facebook, OLD.link_github,
+    OLD.link_pinterest, OLD.numero_telefone, NOW()
   );
-END//
+END;
 
--- ===== Log de CASCADE quando deletar USUÁRIO =====
--- (FK cascade não dispara triggers nas tabelas filhas, então registramos aqui)
-
--- Loga EXTRAINFOS que serão apagados em cascata
-DROP TRIGGER IF EXISTS trg_usuario_log_extrainfo_cascade//
-CREATE TRIGGER trg_usuario_log_extrainfo_cascade
-BEFORE DELETE ON `usuario`
+-- Imagens → Log
+CREATE TRIGGER trg_imagens_to_imagens_log
+AFTER DELETE ON imagens
 FOR EACH ROW
 BEGIN
-  INSERT INTO `extrainfo_log` (
-    `ID_extrainfo`, `link_insta`, `link_facebook`, `link_github`,
-    `link_pinterest`, `numero_telefone`, `data_deletado`
-  )
-  SELECT e.`ID_extrainfo`, e.`link_insta`, e.`link_facebook`, e.`link_github`,
-         e.`link_pinterest`, e.`numero_telefone`, NOW()
-  FROM `extrainfo` AS e
-  WHERE e.`ID_user` = OLD.`ID_user`;
-END//
+  INSERT INTO imagens_log (ID_imagem, imagem, data_deletado)
+  VALUES (OLD.ID_imagem, OLD.imagem, NOW());
+END;
 
--- Loga PROJETOS que serão apagados em cascata
-DROP TRIGGER IF EXISTS trg_usuario_log_projetos_cascade//
-CREATE TRIGGER trg_usuario_log_projetos_cascade
-BEFORE DELETE ON `usuario`
+-- Projeto → Log
+CREATE TRIGGER trg_projeto_to_projeto_log
+AFTER DELETE ON projeto
 FOR EACH ROW
 BEGIN
-  INSERT INTO `projeto_log` (`ID_projeto`, `titulo`, `descricao`, `data_deletado`)
-  SELECT p.`ID_projeto`, p.`titulo`, p.`descricao`, NOW()
-  FROM `projeto` AS p
-  WHERE p.`ID_user` = OLD.`ID_user`;
-END//
+  INSERT INTO projeto_log (ID_projeto, titulo, descricao, data_deletado)
+  VALUES (OLD.ID_projeto, OLD.titulo, OLD.descricao, NOW());
+END;
 
--- Loga IMAGENS dos projetos do usuário que serão apagadas em cascata
-DROP TRIGGER IF EXISTS trg_usuario_log_imagens_cascade//
-CREATE TRIGGER trg_usuario_log_imagens_cascade
-BEFORE DELETE ON `usuario`
+-- Usuário → Logs
+CREATE TRIGGER trg_usuario_to_user_log
+AFTER DELETE ON usuario
 FOR EACH ROW
 BEGIN
-  INSERT INTO `imagens_log` (`ID_imagem`, `imagem`, `tipo_imagem`, `data_deletado`)
-  SELECT i.`ID_imagem`, i.`imagem`, i.`tipo_imagem`, NOW()
-  FROM `imagens` AS i
-  INNER JOIN `projeto` AS p ON p.`ID_projeto` = i.`ID_projeto`
-  WHERE p.`ID_user` = OLD.`ID_user`;
-END//
+  INSERT INTO usuario_log (
+    ID_user, email, autenticado, biografia, senha, plano, username, criado_em, data_deletado
+  ) VALUES (
+    OLD.ID_user, OLD.email, OLD.autenticado, OLD.biografia, OLD.senha, OLD.plano, OLD.username, OLD.criado_em, NOW()
+  );
+END;
 
-DELIMITER ;
+-- ========================================================
+-- =============== EVENTOS ================================
+-- ========================================================
 
--- ======= EVENTS ======
-SET GLOBAL event_scheduler = ON;
-
-DELIMITER //
-
--- Remove códigos vencidos e registra no log
-CREATE EVENT IF NOT EXISTS ev_purge_code_validacao
+-- Expirar códigos de validação
+CREATE EVENT ev_purge_code_validacao
 ON SCHEDULE EVERY 1 MINUTE
-STARTS CURRENT_TIMESTAMP + INTERVAL 1 MINUTE
-ON COMPLETION PRESERVE
 DO
 BEGIN
-  INSERT INTO `code_validacao_log` (`code`, `code_expira_em`, `data_deletado`)
-  SELECT `code`, `code_expira_em`, NOW()
-  FROM `code_validacao`
-  WHERE `code_expira_em` <= NOW();
+  INSERT INTO code_validacao_log (code, code_expira_em, data_deletado)
+  SELECT code, code_expira_em, NOW()
+  FROM code_validacao
+  WHERE code_expira_em <= NOW();
 
-  DELETE FROM `code_validacao`
-  WHERE `code_expira_em` <= NOW();
-END//
+  DELETE FROM code_validacao
+  WHERE code_expira_em <= NOW();
+END;
 
--- Remove usuários não verificados após 1 hora (triggers acima garantem os logs)
-DROP EVENT IF EXISTS ev_purge_unverified_users//
+-- Remover usuários não verificados
 CREATE EVENT ev_purge_unverified_users
 ON SCHEDULE EVERY 1 MINUTE
-ON COMPLETION PRESERVE
 DO
 BEGIN
-  DELETE FROM `usuario`
-  WHERE `autenticado` = FALSE
-    AND `criado_em` <= NOW() - INTERVAL 1 HOUR;
-END//
-
-DELIMITER ;
+  DELETE FROM usuario
+  WHERE autenticado = FALSE
+    AND criado_em <= NOW() - INTERVAL 1 HOUR;
+END;
