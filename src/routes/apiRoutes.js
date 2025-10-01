@@ -14,19 +14,15 @@ router.delete('/user/:id',verifyJWT, userController.deleteUser);
 router.get("/user", userController.getAllUsers);
 router.get("/user/:user", userController.getUserByName);
 
-
-
 //Rotas projetoController
-router.post('/project', projectController.createProject);
 router.post("/project/:ID_user", upload.array("imagens"), projectController.createProject);
+router.post("/like_dislike_projects", projectController.like_or_dislike_projects)
 router.get("/projects", projectController.getAllProjects);
-router.get("/project/:user", projectController.getProjectByUserName);
-router.get("/detalhes_project/:ID_projeto", projectController.getProject);
-
-// router.put("/project/:id", projectController.updateProject);
-// router.delete("/project/:id", projectController.deleteProject);
-
-// router.get("/project/image_ordem/:id_projeto", projectController.getImagemProjeto);
+router.get("/projects/:user", projectController.getProjectsByUserName);
+router.get("/projectsliked/:ID_user", projectController.getProjectsLikedUser);
+router.get("/projectdetail/:ID_projeto", projectController.getProject);
+router.delete("/project/:ID_projeto", projectController.deleteProject);
+router.put("/project/:id", projectController.updateProject);
 
 
 

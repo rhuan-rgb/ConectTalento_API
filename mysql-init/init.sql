@@ -13,6 +13,7 @@ CREATE TABLE usuario (
   email        VARCHAR(255) NOT NULL UNIQUE,
   autenticado  BOOLEAN NOT NULL,
   imagem       LONGBLOB,
+  tipo_imagem  VARCHAR(100),
   biografia    TEXT,
   senha        VARCHAR(255) NOT NULL,
   plano        BOOLEAN NOT NULL,
@@ -39,7 +40,7 @@ CREATE TABLE curtidas (
   ID_user    INT NOT NULL,
   ID_projeto INT NOT NULL,
   CONSTRAINT fk_curtida_user    FOREIGN KEY (ID_user) REFERENCES usuario(ID_user),
-  CONSTRAINT fk_curtida_projeto FOREIGN KEY (ID_projeto) REFERENCES projeto(ID_projeto)
+  CONSTRAINT fk_curtida_projeto FOREIGN KEY (ID_projeto) REFERENCES projeto(ID_projeto) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Código de validação
@@ -100,6 +101,7 @@ CREATE TABLE extrainfo_log (
 CREATE TABLE imagens_log (
   ID_imagem   INT PRIMARY KEY AUTO_INCREMENT,
   imagem      LONGBLOB NOT NULL,
+  tipo_imagem  VARCHAR(100) NOT NULL,
   data_deletado DATETIME NOT NULL,
   ID_projeto  INT NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -109,6 +111,7 @@ CREATE TABLE projeto_log (
   ID_projeto  INT PRIMARY KEY AUTO_INCREMENT,
   titulo      VARCHAR(150) NOT NULL,
   descricao   VARCHAR(255) NOT NULL,
+  total_curtidas INT NOT NULL,
   data_deletado DATETIME NOT NULL,
   ID_user     INT NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -119,17 +122,21 @@ CREATE TABLE usuario_log (
   email        VARCHAR(255) NOT NULL,
   autenticado  BOOLEAN NOT NULL,
   imagem       LONGBLOB,
+  tipo_imagem  VARCHAR(100),
   biografia    TEXT,
   senha        VARCHAR(50) NOT NULL,
   plano        BOOLEAN NOT NULL,
   username     VARCHAR(50) NOT NULL,
   criado_em    DATETIME NOT NULL,
-  name         VARCHAR(50) NOT NULL
+  name         VARCHAR(50) NOT NULL,
+  deletado_em  DATETIME NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ========================================================
 -- =============== TRIGGERS ===============================
 -- ========================================================
+
+DELIMITER $$
 
 -- Curtidas
 CREATE TRIGGER adicionar_curtida
@@ -139,7 +146,7 @@ BEGIN
   UPDATE projeto
   SET total_curtidas = total_curtidas + 1
   WHERE ID_projeto = NEW.ID_projeto;
-END;
+END$$
 
 CREATE TRIGGER remover_curtida
 AFTER DELETE ON curtidas
@@ -148,7 +155,7 @@ BEGIN
   UPDATE projeto
   SET total_curtidas = total_curtidas - 1
   WHERE ID_projeto = OLD.ID_projeto;
-END;
+END$$
 
 -- Extrainfo → Log
 CREATE TRIGGER trg_extrainfo_to_extrainfo_log
@@ -157,30 +164,30 @@ FOR EACH ROW
 BEGIN
   INSERT INTO extrainfo_log (
     ID_extrainfo, link_insta, link_facebook, link_github,
-    link_pinterest, numero_telefone, data_deletado
+    link_pinterest, numero_telefone, ID_user, data_deletado
   ) VALUES (
     OLD.ID_extrainfo, OLD.link_insta, OLD.link_facebook, OLD.link_github,
-    OLD.link_pinterest, OLD.numero_telefone, NOW()
+    OLD.link_pinterest, OLD.numero_telefone, OLD.ID_user, NOW()
   );
-END;
+END$$
 
 -- Imagens → Log
 CREATE TRIGGER trg_imagens_to_imagens_log
 AFTER DELETE ON imagens
 FOR EACH ROW
 BEGIN
-  INSERT INTO imagens_log (ID_imagem, imagem, data_deletado)
-  VALUES (OLD.ID_imagem, OLD.imagem, NOW());
-END;
+  INSERT INTO imagens_log (ID_imagem, imagem, tipo_imagem, ID_projeto, data_deletado)
+  VALUES (OLD.ID_imagem, OLD.imagem, OLD.tipo_imagem, OLD.ID_projeto, NOW());
+END$$
 
 -- Projeto → Log
 CREATE TRIGGER trg_projeto_to_projeto_log
 AFTER DELETE ON projeto
 FOR EACH ROW
 BEGIN
-  INSERT INTO projeto_log (ID_projeto, titulo, descricao, data_deletado)
-  VALUES (OLD.ID_projeto, OLD.titulo, OLD.descricao, NOW());
-END;
+  INSERT INTO projeto_log (ID_projeto, titulo, descricao, total_curtidas, ID_user, data_deletado)
+  VALUES (OLD.ID_projeto, OLD.titulo, OLD.descricao, OLD.total_curtidas, OLD.ID_user, NOW());
+END$$
 
 -- Usuário → Logs
 CREATE TRIGGER trg_usuario_to_user_log
@@ -188,11 +195,13 @@ AFTER DELETE ON usuario
 FOR EACH ROW
 BEGIN
   INSERT INTO usuario_log (
-    ID_user, email, autenticado, biografia, senha, plano, username, criado_em, data_deletado
+    ID_user, email, autenticado, imagem, tipo_imagem, biografia, senha, plano, username, criado_em, name, deletado_em
   ) VALUES (
-    OLD.ID_user, OLD.email, OLD.autenticado, OLD.biografia, OLD.senha, OLD.plano, OLD.username, OLD.criado_em, NOW()
+    OLD.ID_user, OLD.email, OLD.autenticado, OLD.imagem, OLD.tipo_imagem, OLD.biografia, OLD.senha, OLD.plano, OLD.username, OLD.criado_em, OLD.name, NOW()
   );
-END;
+END$$
+
+DELIMITER ;
 
 -- ========================================================
 -- =============== EVENTOS ================================

@@ -1,6 +1,7 @@
 const connect = require("../db/connect");
 const jwt = require("jsonwebtoken");
 const validateUser = require("../services/validateUser");
+const bcrypt = require("bcrypt");
 
 module.exports = class userController {
   static async createUser(req, res) {
@@ -8,21 +9,22 @@ module.exports = class userController {
 
     // ===== Verificações simples =====
     if (!email || !password || !confirmPassword || !username || !name) {
-      return res.status(400).json({ error: "Todos os campos são obrigatórios." });
+      return res
+        .status(400)
+        .json({ error: "Todos os campos são obrigatórios." });
     }
     if (password !== confirmPassword) {
       return res.status(400).json({ error: "As senhas não coincidem" });
     }
     if (!validateUser.validateDataEmail(email)) {
       return res.status(400).json({ error: "Email inválido" });
-    } 
+    }
     if (await validateUser.checkIfEmailCadastrado(email)) {
       return res.status(400).json({ error: "Email já cadastrado" });
-    }     
+    }
     if (await validateUser.validateUserName(username)) {
       return res.status(400).json({ error: "Usuário já com esse username" });
     }
-
 
     if (code) {
       const codeOk = await validateUser.validateCode(email, code); // valida se o codigo é valido ou não
@@ -30,10 +32,13 @@ module.exports = class userController {
       if (codeOk === true) {
         try {
           // pega o usuário para ter o ID_user e montar o token
-          const qSelectUser = "SELECT ID_user, email, username, name, plano, criado_em FROM usuario WHERE email = ? LIMIT 1";
+          const qSelectUser =
+            "SELECT ID_user, email, username, name, plano, criado_em FROM usuario WHERE email = ? LIMIT 1";
           connect.query(qSelectUser, [email], (err, rows) => {
             if (err) {
-              return res.status(500).json({ error: "Erro ao buscar usuário.", err });
+              return res
+                .status(500)
+                .json({ error: "Erro ao buscar usuário.", err });
             }
             if (!rows.length) {
               return res.status(404).json({ error: "Usuário não encontrado." });
@@ -42,14 +47,21 @@ module.exports = class userController {
             const user = rows[0];
 
             // autentica o usuário
-            const qUpdate = "UPDATE usuario SET autenticado = true WHERE ID_user = ? LIMIT 1";
+            const qUpdate =
+              "UPDATE usuario SET autenticado = true WHERE ID_user = ? LIMIT 1";
             connect.query(qUpdate, [user.ID_user], (err2) => {
               if (err2) {
-                return res.status(500).json({ error: "Erro ao autenticar usuário.", err: err2 });
+                return res
+                  .status(500)
+                  .json({ error: "Erro ao autenticar usuário.", err: err2 });
               }
 
               // gera JWT
-              const token = jwt.sign({ ID_user: user.ID_user }, process.env.SECRET, { expiresIn: "1h" });
+              const token = jwt.sign(
+                { ID_user: user.ID_user },
+                process.env.SECRET,
+                { expiresIn: "1h" }
+              );
 
               return res.status(200).json({
                 message: "Código válido. Usuário autenticado.",
@@ -59,7 +71,9 @@ module.exports = class userController {
             });
           });
         } catch (error) {
-          return res.status(500).json({ error: "Erro interno do servidor.", error });
+          return res
+            .status(500)
+            .json({ error: "Erro interno do servidor.", error });
         }
       } else if (codeOk === "expirado") {
         return res.status(400).json({
@@ -75,9 +89,14 @@ module.exports = class userController {
 
         if (userExiste) {
           const ID_user = userExiste[0].ID_user;
-          const generatedCode = await validateUser.sendCodeToEmail(email, ID_user);
+          const generatedCode = await validateUser.sendCodeToEmail(
+            email,
+            ID_user
+          );
           if (!generatedCode) {
-            return res.status(500).json({ error: "Falha ao enviar o código. Tente novamente." });
+            return res
+              .status(500)
+              .json({ error: "Falha ao enviar o código. Tente novamente." });
           }
 
           return res.status(202).json({
@@ -90,21 +109,36 @@ module.exports = class userController {
         const insertSql =
           "INSERT INTO usuario (email, senha, username, name, autenticado, criado_em, plano) VALUES (?, ?, ?, ?, false, NOW(), false)";
 
-        connect.query(insertSql, [email, hashedPassword, username, name], async (err, result) => {
-          if (err) {
-            return res.status(500).json({ error: "Erro interno do servidor", err });
-          }
+        connect.query(
+          insertSql,
+          [email, hashedPassword, username, name],
+          async (err, result) => {
+            if (err) {
+              return res
+                .status(500)
+                .json({ error: "Erro interno do servidor", err });
+            }
 
-          const ID_user = result.insertId;
-          const generatedCode = await validateUser.sendCodeToEmail(email, ID_user);
-          if (!generatedCode) {
-            return res.status(500).json({ error: "Falha ao enviar o código. Tente novamente." });
-          }
+            const ID_user = result.insertId;
+            const generatedCode = await validateUser.sendCodeToEmail(
+              email,
+              ID_user
+            );
+            if (!generatedCode) {
+              return res
+                .status(500)
+                .json({ error: "Falha ao enviar o código. Tente novamente." });
+            }
 
-          return res.status(201).json({ message: "Código enviado ao e-mail." });
-        });
+            return res
+              .status(201)
+              .json({ message: "Código enviado ao e-mail." });
+          }
+        );
       } catch (error) {
-        return res.status(500).json({ error: "Erro interno do servidor", detail: error });
+        return res
+          .status(500)
+          .json({ error: "Erro interno do servidor", detail: error });
       }
     }
   }
@@ -135,7 +169,10 @@ module.exports = class userController {
         const user = results[0];
 
         // Verificar se a senha corresponde
-        const senhaValida = await validateUser.comparePassword(password, user.senha);
+        const senhaValida = await validateUser.comparePassword(
+          password,
+          user.senha
+        );
 
         if (!senhaValida) {
           return res.status(403).json({ error: "Senha Incorreta" });
@@ -187,7 +224,7 @@ module.exports = class userController {
   static async getUserByName(req, res) {
     const userName = req.params.user;
 
-    if (!userName) {
+    if (!userName || typeof userName !== "string" || !userName.trim()) {
       return res.status(400).send("Usuário inválido.");
     }
 
@@ -196,7 +233,8 @@ module.exports = class userController {
       u.username,
       u.email,
       u.biografia,
-      u.imagem_user,
+      u.imagem,
+      u.tipo_imagem,
       e.link_insta,
       e.link_facebook,
       e.link_github,
@@ -219,11 +257,18 @@ module.exports = class userController {
       }
 
       const user = results[0];
+
+      let imagemBase64 = null;
+      if (user.imagem && Buffer.isBuffer(user.imagem)) {
+        imagemBase64 = user.imagem.toString("base64");
+      }
+
       const profile = {
         username: user.username,
         email: user.email,
         biografia: user.biografia,
-        imagem_user: user.imagem_user,
+        imagem: imagemBase64,
+        tipo_imagem: user.tipo_imagem,
         extrainfo: {
           link_insta: user.link_insta || null,
           link_facebook: user.link_facebook || null,
@@ -241,9 +286,8 @@ module.exports = class userController {
     const userId = String(req.params.id);
     const idCorreto = String(req.userId);
     const { email, biografia, username, name } = req.body;
-    const imagem = req.file?.buffer || null
-    const tipoImagem = req.file?.mimetype || null
-
+    const imagem = req.file?.buffer || null;
+    const tipo_imagem = req.file?.mimetype || null;
 
     if (idCorreto !== userId) {
       return res
@@ -251,26 +295,28 @@ module.exports = class userController {
         .json({ error: "Você não tem permissão de apagar esta conta" });
     }
     if (!email || !biografia || !username || !name) {
-      return res.status(400).json({ error: "Todos os campos são obrigatórios." });
+      return res
+        .status(400)
+        .json({ error: "Todos os campos são obrigatórios." });
     }
     if (!validateUser.validateDataEmail(email)) {
       return res.status(400).json({ error: "Email inválido" });
-    } 
+    }
     if (await validateUser.checkIfEmailCadastrado(email)) {
       return res.status(400).json({ error: "Email já cadastrado" });
-    }     
+    }
     if (await validateUser.validateUserName(username)) {
       return res.status(400).json({ error: "Usuário já com esse username" });
-    }    
+    }
 
-    const query = `UPDATE usuario SET email=?, username=?, name=?, biografia=?, imagem=?, tipoImagem=? WHERE ID_user = ?`;
+    const query = `UPDATE usuario SET email=?, username=?, name=?, biografia=?, imagem=?, tipo_imagem=? WHERE ID_user = ?`;
     const values = [
       email,
       username,
       name,
       biografia,
       imagem,
-      tipoImagem,
+      tipo_imagem,
       userId,
     ];
 
@@ -299,7 +345,6 @@ module.exports = class userController {
     }
   }
 
-
   static async updatePassword(req, res) {
     const userId = String(req.params.id);
     const idCorreto = String(req.userId);
@@ -310,41 +355,48 @@ module.exports = class userController {
         .status(400)
         .json({ error: "Você não tem permissão de apagar esta conta" });
     }
-    if ( senha_atual === nova_senha) {
+    if (senha_atual === nova_senha) {
       return res.status(400).json({ error: "As senhas são iguais" });
     }
-  
+    if (!senha_atual || !nova_senha) {
+      return res
+        .status(400)
+        .json({ error: "Informe senha_atual e nova_senha" });
+    }
+
     try {
-      const querySelect = "SELECT password FROM usuario WHERE ID_user = ?";
+      const querySelect = "SELECT senha FROM usuario WHERE ID_user = ?";
       connect.query(querySelect, [userId], async (err, results) => {
         if (err) {
           console.error(err);
           return res.status(500).json({ error: "Erro ao buscar usuário" });
         }
-  
+
         if (results.length === 0) {
           return res.status(404).json({ error: "Usuário não encontrado" });
         }
-  
-        const senhaHashAtual = results[0].password;
-  
+
+        const senhaHashAtual = results[0].senha;
+
         // Verifica se a senha atual está correta
         const senhaCorreta = await bcrypt.compare(senha_atual, senhaHashAtual);
         if (!senhaCorreta) {
           return res.status(401).json({ error: "Senha atual incorreta" });
         }
-  
+
         // Gera hash da nova senha
-        const novaSenhaHash = await bcrypt.hash(nova_senha, SALT_ROUNDS);
-  
+        const novaSenhaHash = await validateUser.hashPassword(nova_senha);
+
         // Atualiza a senha no banco
-        const queryUpdate = "UPDATE usuario SET password = ? WHERE ID_user = ?";
+        const queryUpdate = "UPDATE usuario SET senha = ? WHERE ID_user = ?";
         connect.query(queryUpdate, [novaSenhaHash, userId], (err, result) => {
           if (err) {
             console.error(err);
             return res.status(500).json({ error: "Erro ao atualizar a senha" });
           }
-          return res.status(200).json({ message: "Senha atualizada com sucesso" });
+          return res
+            .status(200)
+            .json({ message: "Senha atualizada com sucesso" });
         });
       });
     } catch (error) {
@@ -386,5 +438,4 @@ module.exports = class userController {
       return res.status(500).json({ error: "Erro Interno de Servidor" });
     }
   }
-
 };
