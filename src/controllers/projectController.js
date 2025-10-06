@@ -7,10 +7,17 @@ module.exports = class projectController {
     const { titulo, descricao } = req.body;
     const imagens = req.files;
 
-    if (!titulo || !descricao || !imagens || imagens.length === 0) {
+    if (!titulo || !descricao) {
       return res.status(400).json({
         error:
-          "Todos os campos devem ser preenchidos e pelo menos uma imagem deve ser enviada.",
+          "Todos os campos devem ser preenchidos",
+      });
+    }
+
+    if (imagens.length === 0){
+      return res.status(400).json({
+        error:
+          "Pelo menos uma imagem deve ser enviada.",
       });
     }
 
@@ -78,18 +85,35 @@ module.exports = class projectController {
   // UPDATE
   static async updateProject(req, res) {
     const ID_projeto = req.params.id;
-    const { titulo, descricao, ID_user } = req.body;
+    const { titulo, descricao } = req.body;
     const imagens = req.files;
+    const idCorreto = Number(req.userId);
+    const ID_user = Number(req.body.ID_user)
+
+    console.log(imagens)
+    
+    if (idCorreto !== ID_user) {
+      return res
+        .status(400)
+        .json({ error: "Você não tem permissão de apagar esta conta" });
+    }
 
     if (
       !ID_user ||
       !titulo ||
       !descricao ||
-      !imagens
+      !ID_projeto
     ) {
       return res.status(400).json({
         error:
-          "Todos os campos devem ser preenchidos e pelo menos uma imagem deve ser enviada",
+          "Todos os campos devem ser preenchidos",
+      });
+    }
+
+    if (imagens.length === 0){
+      return res.status(400).json({
+        error:
+          "Pelo menos uma imagem deve ser enviada.",
       });
     }
 
@@ -124,6 +148,7 @@ module.exports = class projectController {
             }
 
             const promises = imagens.map((img, index) => {
+              console.log(img)
               const ordem = index + 1;
               const tipoImagem = img.mimetype;
               const queryImagem = `UPDATE imagens SET imagem = ?, tipo_imagem = ?, ordem = ? WHERE ID_projeto = ? AND  ordem = ?`;

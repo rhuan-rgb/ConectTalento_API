@@ -286,8 +286,6 @@ module.exports = class userController {
     const userId = String(req.params.id);
     const idCorreto = String(req.userId);
     const { email, biografia, username, name } = req.body;
-    const imagem = req.file?.buffer || null;
-    const tipo_imagem = req.file?.mimetype || null;
 
     if (idCorreto !== userId) {
       return res
@@ -309,18 +307,9 @@ module.exports = class userController {
       return res.status(400).json({ error: "Usuário já com esse username" });
     }
 
-    const query = `UPDATE usuario SET email=?, username=?, name=?, biografia=?, imagem=?, tipo_imagem=? WHERE ID_user = ?`;
-    const values = [
-      email,
-      username,
-      name,
-      biografia,
-      imagem,
-      tipo_imagem,
-      userId,
-    ];
-
     try {
+      const query = `UPDATE usuario SET email=?, username=?, name=?, biografia=? WHERE ID_user = ?`;
+      const values = [email, username, name, biografia, userId];
       connect.query(query, values, function (err, results) {
         if (err) {
           if (err.code === "ER_DUP_ENTRY") {
@@ -339,6 +328,44 @@ module.exports = class userController {
           .status(200)
           .json({ message: "Usuário atualizado com sucesso." });
       });
+    } catch (error) {
+      console.error("Erro ao executar a consulta:", error);
+      return res.status(500).json({ error: "Erro Interno de Servidor" });
+    }
+  }
+
+  static async updateImagemUser(req, res) {
+    const userId = String(req.params.id);
+    const idCorreto = String(req.userId);
+    const arquivo = req.files;
+
+    if (idCorreto !== userId) {
+      return res
+        .status(400)
+        .json({ error: "Você não tem permissão de apagar esta conta" });
+    }
+
+    if (arquivo.length !== 1) {
+      return res.status(400).json({
+        error: "Coloque somente uma imagem",
+      });
+    }
+
+    const tipo_imagem = arquivo.mimetype
+    const imagem = arquivo.buffer
+
+    try {
+      const query = `UPDATE usuario SET imagem= ?, tipo_imagem=? WHERE ID_user = ?`;
+      const values = [imagem, tipo_imagem, userId ]
+      connect.query(query, values, function (err, results) {
+        if (err) {
+          console.error(err);
+          return res.status(500).json({ error: "Erro Interno do Servidor" });
+        }
+        return res
+          .status(200)
+          .json({ message: "Imagem do usuário atualizado com sucesso." });
+      })
     } catch (error) {
       console.error("Erro ao executar a consulta:", error);
       return res.status(500).json({ error: "Erro Interno de Servidor" });
