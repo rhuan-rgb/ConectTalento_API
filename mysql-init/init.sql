@@ -25,12 +25,12 @@ DROP TABLE IF EXISTS `code_validacao`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `code_validacao` (
-  `code` char(6) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `code` char(6) COLLATE utf8mb4_unicode_ci NOT NULL,
   `code_expira_em` datetime NOT NULL,
   `ID_user` int NOT NULL,
   PRIMARY KEY (`code`),
-  KEY `fk_code_user` (`ID_user`),
   KEY `ix_code_expira` (`code_expira_em`),
+  KEY `fk_code_user` (`ID_user`),
   CONSTRAINT `fk_code_user` FOREIGN KEY (`ID_user`) REFERENCES `usuario` (`ID_user`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -52,7 +52,7 @@ DROP TABLE IF EXISTS `code_validacao_log`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `code_validacao_log` (
-  `code` char(6) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `code` char(6) COLLATE utf8mb4_unicode_ci NOT NULL,
   `code_expira_em` datetime NOT NULL,
   `data_deletado` datetime NOT NULL,
   PRIMARY KEY (`code`)
@@ -80,10 +80,10 @@ CREATE TABLE `curtidas` (
   `ID_user` int NOT NULL,
   `ID_projeto` int NOT NULL,
   PRIMARY KEY (`ID_curtida`),
-  KEY `ID_user` (`ID_user`),
-  KEY `ID_projeto` (`ID_projeto`),
-  CONSTRAINT `curtidas_ibfk_1` FOREIGN KEY (`ID_user`) REFERENCES `usuario` (`ID_user`) ON DELETE CASCADE,
-  CONSTRAINT `curtidas_ibfk_2` FOREIGN KEY (`ID_projeto`) REFERENCES `projeto` (`ID_projeto`) ON DELETE CASCADE
+  KEY `fk_curtida_user` (`ID_user`),
+  KEY `fk_curtida_projeto` (`ID_projeto`),
+  CONSTRAINT `fk_curtida_projeto` FOREIGN KEY (`ID_projeto`) REFERENCES `projeto` (`ID_projeto`) ON DELETE CASCADE,
+  CONSTRAINT `fk_curtida_user` FOREIGN KEY (`ID_user`) REFERENCES `usuario` (`ID_user`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -105,9 +105,9 @@ UNLOCK TABLES;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
 /*!50003 CREATE*/ /*!50017 DEFINER=`alunods`@`%`*/ /*!50003 TRIGGER `adicionar_curtida` AFTER INSERT ON `curtidas` FOR EACH ROW BEGIN
-    UPDATE projeto
-    SET total_curtidas = total_curtidas + 1
-    WHERE projeto.ID_projeto = NEW.ID_projeto;
+  UPDATE projeto
+  SET total_curtidas = total_curtidas + 1
+  WHERE ID_projeto = NEW.ID_projeto;
 END */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -124,9 +124,9 @@ DELIMITER ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
 /*!50003 CREATE*/ /*!50017 DEFINER=`alunods`@`%`*/ /*!50003 TRIGGER `remover_curtida` AFTER DELETE ON `curtidas` FOR EACH ROW BEGIN
-    UPDATE projeto
-    SET total_curtidas = total_curtidas - 1
-    WHERE projeto.ID_projeto = OLD.ID_projeto;
+  UPDATE projeto
+  SET total_curtidas = total_curtidas - 1
+  WHERE ID_projeto = OLD.ID_projeto;
 END */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -143,11 +143,11 @@ DROP TABLE IF EXISTS `extrainfo`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `extrainfo` (
   `ID_extrainfo` int NOT NULL AUTO_INCREMENT,
-  `link_insta` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `link_facebook` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `link_github` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `link_pinterest` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `numero_telefone` char(11) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `link_insta` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `link_facebook` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `link_github` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `link_pinterest` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `numero_telefone` char(11) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `ID_user` int NOT NULL,
   PRIMARY KEY (`ID_extrainfo`),
   KEY `fk_extrainfo_user` (`ID_user`),
@@ -166,19 +166,19 @@ UNLOCK TABLES;
 /*!50003 SET @saved_cs_client      = @@character_set_client */ ;
 /*!50003 SET @saved_cs_results     = @@character_set_results */ ;
 /*!50003 SET @saved_col_connection = @@collation_connection */ ;
-/*!50003 SET character_set_client  = utf8mb3 */ ;
-/*!50003 SET character_set_results = utf8mb3 */ ;
-/*!50003 SET collation_connection  = utf8mb3_general_ci */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
 /*!50003 CREATE*/ /*!50017 DEFINER=`alunods`@`%`*/ /*!50003 TRIGGER `trg_extrainfo_to_extrainfo_log` AFTER DELETE ON `extrainfo` FOR EACH ROW BEGIN
-  INSERT INTO `extrainfo_log` (
-    `ID_extrainfo`, `link_insta`, `link_facebook`, `link_github`,
-    `link_pinterest`, `numero_telefone`, `data_deletado`
+  INSERT INTO extrainfo_log (
+    ID_extrainfo, link_insta, link_facebook, link_github,
+    link_pinterest, numero_telefone, ID_user, data_deletado
   ) VALUES (
-    OLD.`ID_extrainfo`, OLD.`link_insta`, OLD.`link_facebook`, OLD.`link_github`,
-    OLD.`link_pinterest`, OLD.`numero_telefone`, NOW()
+    OLD.ID_extrainfo, OLD.link_insta, OLD.link_facebook, OLD.link_github,
+    OLD.link_pinterest, OLD.numero_telefone, OLD.ID_user, NOW()
   );
 END */;;
 DELIMITER ;
@@ -196,11 +196,11 @@ DROP TABLE IF EXISTS `extrainfo_log`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `extrainfo_log` (
   `ID_extrainfo` int NOT NULL AUTO_INCREMENT,
-  `link_insta` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `link_facebook` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `link_github` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `link_pinterest` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `numero_telefone` char(11) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `link_insta` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `link_facebook` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `link_github` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `link_pinterest` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `numero_telefone` char(11) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `ID_user` int NOT NULL,
   `data_deletado` datetime NOT NULL,
   PRIMARY KEY (`ID_extrainfo`)
@@ -246,18 +246,15 @@ UNLOCK TABLES;
 /*!50003 SET @saved_cs_client      = @@character_set_client */ ;
 /*!50003 SET @saved_cs_results     = @@character_set_results */ ;
 /*!50003 SET @saved_col_connection = @@collation_connection */ ;
-/*!50003 SET character_set_client  = utf8mb3 */ ;
-/*!50003 SET character_set_results = utf8mb3 */ ;
-/*!50003 SET collation_connection  = utf8mb3_general_ci */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
 /*!50003 CREATE*/ /*!50017 DEFINER=`alunods`@`%`*/ /*!50003 TRIGGER `trg_imagens_to_imagens_log` AFTER DELETE ON `imagens` FOR EACH ROW BEGIN
-  INSERT INTO `imagens_log` (
-    `ID_imagem`, `imagem`, `data_deletado`
-  ) VALUES (
-    OLD.`ID_imagem`, OLD.`imagem`, NOW()
-  );
+  INSERT INTO imagens_log (ID_imagem, imagem, tipo_imagem, ID_projeto, data_deletado)
+  VALUES (OLD.ID_imagem, OLD.imagem, OLD.tipo_imagem, OLD.ID_projeto, NOW());
 END */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -275,6 +272,7 @@ DROP TABLE IF EXISTS `imagens_log`;
 CREATE TABLE `imagens_log` (
   `ID_imagem` int NOT NULL AUTO_INCREMENT,
   `imagem` longblob NOT NULL,
+  `tipo_imagem` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
   `data_deletado` datetime NOT NULL,
   `ID_projeto` int NOT NULL,
   PRIMARY KEY (`ID_imagem`)
@@ -299,8 +297,8 @@ DROP TABLE IF EXISTS `projeto`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `projeto` (
   `ID_projeto` int NOT NULL AUTO_INCREMENT,
-  `titulo` varchar(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `descricao` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `titulo` varchar(150) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `descricao` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `total_curtidas` int DEFAULT '0',
   `criado_em` datetime NOT NULL,
   `ID_user` int NOT NULL,
@@ -321,38 +319,15 @@ UNLOCK TABLES;
 /*!50003 SET @saved_cs_client      = @@character_set_client */ ;
 /*!50003 SET @saved_cs_results     = @@character_set_results */ ;
 /*!50003 SET @saved_col_connection = @@collation_connection */ ;
-/*!50003 SET character_set_client  = utf8mb3 */ ;
-/*!50003 SET character_set_results = utf8mb3 */ ;
-/*!50003 SET collation_connection  = utf8mb3_general_ci */ ;
-/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
-/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
-DELIMITER ;;
-/*!50003 CREATE*/ /*!50017 DEFINER=`alunods`@`%`*/ /*!50003 TRIGGER `trg_projeto_log_imagens_cascade` BEFORE DELETE ON `projeto` FOR EACH ROW BEGIN
-  INSERT INTO `imagens_log` (`ID_imagem`, `imagem`, `data_deletado`)
-  SELECT i.`ID_imagem`, i.`imagem`, NOW()
-  FROM `imagens` AS i
-  WHERE i.`ID_projeto` = OLD.`ID_projeto`;
-END */;;
-DELIMITER ;
-/*!50003 SET sql_mode              = @saved_sql_mode */ ;
-/*!50003 SET character_set_client  = @saved_cs_client */ ;
-/*!50003 SET character_set_results = @saved_cs_results */ ;
-/*!50003 SET collation_connection  = @saved_col_connection */ ;
-/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
-/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
-/*!50003 SET @saved_col_connection = @@collation_connection */ ;
-/*!50003 SET character_set_client  = utf8mb3 */ ;
-/*!50003 SET character_set_results = utf8mb3 */ ;
-/*!50003 SET collation_connection  = utf8mb3_general_ci */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
 /*!50003 CREATE*/ /*!50017 DEFINER=`alunods`@`%`*/ /*!50003 TRIGGER `trg_projeto_to_projeto_log` AFTER DELETE ON `projeto` FOR EACH ROW BEGIN
-  INSERT INTO `projeto_log` (
-    `ID_projeto`, `titulo`, `descrição`, `data_deletado`
-  ) VALUES (
-    OLD.`ID_projeto`, OLD.`titulo`, OLD.`descrição`, NOW()
-  );
+  INSERT INTO projeto_log (ID_projeto, titulo, descricao, total_curtidas, ID_user, data_deletado)
+  VALUES (OLD.ID_projeto, OLD.titulo, OLD.descricao, OLD.total_curtidas, OLD.ID_user, NOW());
 END */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -369,8 +344,9 @@ DROP TABLE IF EXISTS `projeto_log`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `projeto_log` (
   `ID_projeto` int NOT NULL AUTO_INCREMENT,
-  `titulo` varchar(150) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `descricao` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `titulo` varchar(150) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `descricao` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `total_curtidas` int NOT NULL,
   `data_deletado` datetime NOT NULL,
   `ID_user` int NOT NULL,
   PRIMARY KEY (`ID_projeto`)
@@ -395,18 +371,19 @@ DROP TABLE IF EXISTS `usuario`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `usuario` (
   `ID_user` int NOT NULL AUTO_INCREMENT,
-  `email` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `email` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `autenticado` tinyint(1) NOT NULL,
   `imagem` longblob,
-  `biografia` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
-  `senha` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `tipo_imagem` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `biografia` text COLLATE utf8mb4_unicode_ci,
+  `senha` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `plano` tinyint(1) NOT NULL,
-  `username` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `username` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
   `name` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
   `criado_em` datetime NOT NULL,
   PRIMARY KEY (`ID_user`),
   UNIQUE KEY `email` (`email`),
-  UNIQUE KEY `username_UNIQUE` (`username`),
+  UNIQUE KEY `username` (`username`),
   KEY `ix_auth_criado` (`autenticado`,`criado_em`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -422,43 +399,17 @@ UNLOCK TABLES;
 /*!50003 SET @saved_cs_client      = @@character_set_client */ ;
 /*!50003 SET @saved_cs_results     = @@character_set_results */ ;
 /*!50003 SET @saved_col_connection = @@collation_connection */ ;
-/*!50003 SET character_set_client  = utf8mb3 */ ;
-/*!50003 SET character_set_results = utf8mb3 */ ;
-/*!50003 SET collation_connection  = utf8mb3_general_ci */ ;
-/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
-/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
-DELIMITER ;;
-/*!50003 CREATE*/ /*!50017 DEFINER=`alunods`@`%`*/ /*!50003 TRIGGER `trg_usuario_log_extrainfo_cascade` BEFORE DELETE ON `usuario` FOR EACH ROW BEGIN
-  INSERT INTO `extrainfo_log` (
-    `ID_extrainfo`, `link_insta`, `link_facebook`, `link_github`,
-    `link_pinterest`, `numero_telefone`, `data_deletado`
-  )
-  SELECT e.`ID_extrainfo`, e.`link_insta`, e.`link_facebook`, e.`link_github`,
-         e.`link_pinterest`, e.`numero_telefone`, NOW()
-  FROM `extrainfo` AS e
-  WHERE e.`ID_user` = OLD.`ID_user`;
-END */;;
-DELIMITER ;
-/*!50003 SET sql_mode              = @saved_sql_mode */ ;
-/*!50003 SET character_set_client  = @saved_cs_client */ ;
-/*!50003 SET character_set_results = @saved_cs_results */ ;
-/*!50003 SET collation_connection  = @saved_col_connection */ ;
-/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
-/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
-/*!50003 SET @saved_col_connection = @@collation_connection */ ;
-/*!50003 SET character_set_client  = utf8mb3 */ ;
-/*!50003 SET character_set_results = utf8mb3 */ ;
-/*!50003 SET collation_connection  = utf8mb3_general_ci */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
 /*!50003 CREATE*/ /*!50017 DEFINER=`alunods`@`%`*/ /*!50003 TRIGGER `trg_usuario_to_user_log` AFTER DELETE ON `usuario` FOR EACH ROW BEGIN
-  INSERT INTO user_log (
-    ID_user, email, autenticado, biografia, senha, plano, username, criado_em, data_deletado
-  )
-  VALUES (
-    OLD.ID_user, OLD.email, OLD.autenticado, OLD.biografia, OLD.senha, OLD.plano, OLD.username, OLD.criado_em,
-    NOW()
+  INSERT INTO usuario_log (
+    ID_user, email, autenticado, imagem, tipo_imagem, biografia, senha, plano, username, criado_em, name, deletado_em
+  ) VALUES (
+    OLD.ID_user, OLD.email, OLD.autenticado, OLD.imagem, OLD.tipo_imagem, OLD.biografia, OLD.senha, OLD.plano, OLD.username, OLD.criado_em, OLD.name, NOW()
   );
 END */;;
 DELIMITER ;
@@ -477,14 +428,16 @@ DROP TABLE IF EXISTS `usuario_log`;
 CREATE TABLE `usuario_log` (
   `ID_user` int NOT NULL,
   `email` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `autenticado` tinyint NOT NULL,
+  `autenticado` tinyint(1) NOT NULL,
   `imagem` longblob,
+  `tipo_imagem` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `biografia` text COLLATE utf8mb4_unicode_ci,
   `senha` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `plano` tinyint NOT NULL,
+  `plano` tinyint(1) NOT NULL,
   `username` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
   `criado_em` datetime NOT NULL,
   `name` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `deletado_em` datetime NOT NULL,
   PRIMARY KEY (`ID_user`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -507,23 +460,21 @@ DELIMITER ;;
 /*!50003 SET @saved_cs_client      = @@character_set_client */ ;;
 /*!50003 SET @saved_cs_results     = @@character_set_results */ ;;
 /*!50003 SET @saved_col_connection = @@collation_connection */ ;;
-/*!50003 SET character_set_client  = utf8mb3 */ ;;
-/*!50003 SET character_set_results = utf8mb3 */ ;;
-/*!50003 SET collation_connection  = utf8mb3_general_ci */ ;;
+/*!50003 SET character_set_client  = utf8mb4 */ ;;
+/*!50003 SET character_set_results = utf8mb4 */ ;;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;;
 /*!50003 SET @saved_time_zone      = @@time_zone */ ;;
 /*!50003 SET time_zone             = 'SYSTEM' */ ;;
-/*!50106 CREATE*/ /*!50117 DEFINER=`alunods`@`%`*/ /*!50106 EVENT `ev_purge_code_validacao` ON SCHEDULE EVERY 1 MINUTE STARTS '2025-09-10 14:32:42' ON COMPLETION PRESERVE ENABLE DO BEGIN
-  -- 1) registra no log tudo que venceu
-  INSERT INTO `code_validacao_log` (`code`, `code_expira_em`, `data_deletado`)
-  SELECT `code`, `code_expira_em`, NOW()
-  FROM `code_validacao`
-  WHERE `code_expira_em` <= NOW();
+/*!50106 CREATE*/ /*!50117 DEFINER=`alunods`@`%`*/ /*!50106 EVENT `ev_purge_code_validacao` ON SCHEDULE EVERY 1 MINUTE STARTS '2025-10-06 11:26:20' ON COMPLETION NOT PRESERVE ENABLE DO BEGIN
+  INSERT INTO code_validacao_log (code, code_expira_em, data_deletado)
+  SELECT code, code_expira_em, NOW()
+  FROM code_validacao
+  WHERE code_expira_em <= NOW();
 
-  -- 2) remove os vencidos
-  DELETE FROM `code_validacao`
-  WHERE `code_expira_em` <= NOW();
+  DELETE FROM code_validacao
+  WHERE code_expira_em <= NOW();
 END */ ;;
 /*!50003 SET time_zone             = @saved_time_zone */ ;;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;;
@@ -535,18 +486,17 @@ DELIMITER ;;
 /*!50003 SET @saved_cs_client      = @@character_set_client */ ;;
 /*!50003 SET @saved_cs_results     = @@character_set_results */ ;;
 /*!50003 SET @saved_col_connection = @@collation_connection */ ;;
-/*!50003 SET character_set_client  = utf8mb3 */ ;;
-/*!50003 SET character_set_results = utf8mb3 */ ;;
-/*!50003 SET collation_connection  = utf8mb3_general_ci */ ;;
+/*!50003 SET character_set_client  = utf8mb4 */ ;;
+/*!50003 SET character_set_results = utf8mb4 */ ;;
+/*!50003 SET collation_connection  = utf8mb4_0900_ai_ci */ ;;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;;
 /*!50003 SET @saved_time_zone      = @@time_zone */ ;;
 /*!50003 SET time_zone             = 'SYSTEM' */ ;;
-/*!50106 CREATE*/ /*!50117 DEFINER=`alunods`@`%`*/ /*!50106 EVENT `ev_purge_unverified_users` ON SCHEDULE EVERY 1 MINUTE STARTS '2025-09-10 14:31:42' ON COMPLETION PRESERVE ENABLE DO BEGIN
-  DELETE FROM `usuario`
-  WHERE `autenticado` = FALSE
-    AND `criado_em` <= NOW() - INTERVAL 1 HOUR;
-  -- O DELETE aciona sua trigger e registra no user_log.
+/*!50106 CREATE*/ /*!50117 DEFINER=`alunods`@`%`*/ /*!50106 EVENT `ev_purge_unverified_users` ON SCHEDULE EVERY 1 MINUTE STARTS '2025-10-06 11:26:20' ON COMPLETION NOT PRESERVE ENABLE DO BEGIN
+  DELETE FROM usuario
+  WHERE autenticado = FALSE
+    AND criado_em <= NOW() - INTERVAL 1 HOUR;
 END */ ;;
 /*!50003 SET time_zone             = @saved_time_zone */ ;;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;;
@@ -569,4 +519,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-09-17 13:09:38
+-- Dump completed on 2025-10-06 12:44:20
