@@ -202,24 +202,47 @@ module.exports = class userController {
   }
 
   static async getAllUsers(req, res) {
-    const query = `SELECT ID_user, email, autenticado, biografia, plano, username, name FROM usuario`;
+  const query = `SELECT * FROM usuario`;
 
-    try {
-      connect.query(query, function (err, results) {
-        if (err) {
-          console.error(err);
-          return res.status(500).json({ error: "Erro Interno do Servidor" });
+  try {
+    connect.query(query, function (err, results) {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ error: "Erro Interno do Servidor" });
+      }
+
+      // Converte imagem binária em base64 para cada usuário
+      const users = results.map((user) => {
+        let imagemBase64 = null;
+        if (user.imagem && Buffer.isBuffer(user.imagem)) {
+          imagemBase64 = user.imagem.toString("base64");
         }
-        return res.status(200).json({
-          message: "Mostrando usuários: ",
-          users: results,
-        });
+
+        return {
+          ID_user: user.ID_user,
+          email: user.email,
+          autenticado: user.autenticado,
+          biografia: user.biografia,
+          username: user.username,
+          name: user.name,
+          plano: user.plano,
+          criado_em: user.criado_em,
+          imagem: imagemBase64,
+          tipo_imagem: user.tipo_imagem,
+        };
       });
-    } catch (error) {
-      console.error("Erro ao executar a consulta:", error);
-      return res.status(500).json({ error: "Um erro foi encontrado." });
-    }
+
+      return res.status(200).json({
+        message: "Mostrando usuários:",
+        users,
+      });
+    });
+  } catch (error) {
+    console.error("Erro ao executar a consulta:", error);
+    return res.status(500).json({ error: "Um erro foi encontrado." });
   }
+}
+
 
   static async getUserByName(req, res) {
     const userName = req.params.user;
@@ -250,10 +273,10 @@ module.exports = class userController {
     connect.query(sql, [userName], (err, results) => {
       if (err) {
         console.error(err);
-        return res.status(500).send("Erro no servidor.");
+        return res.status(500).json({ error: "Erro Interno do Servidor" });
       }
       if (results.length === 0) {
-        return res.status(404).send("Perfil não encontrado.");
+        return res.status(404).json({ error: "Perfil não encontrado." });
       }
 
       const user = results[0];
@@ -283,56 +306,72 @@ module.exports = class userController {
   }
 
   static async updateUser(req, res) {
-    const userId = String(req.params.id);
-    const idCorreto = String(req.userId);
-    const { email, biografia, username, name } = req.body;
+  const userId = String(req.params.id);
+  const idCorreto = String(req.userId);
+  const { email, biografia, username, name } = req.body;
 
-    if (idCorreto !== userId) {
-      return res
-        .status(400)
-        .json({ error: "Você não tem permissão de apagar esta conta" });
-    }
-    if (!email || !biografia || !username || !name) {
-      return res
-        .status(400)
-        .json({ error: "Todos os campos são obrigatórios." });
-    }
-    if (!validateUser.validateDataEmail(email)) {
-      return res.status(400).json({ error: "Email inválido" });
-    }
-    if (await validateUser.checkIfEmailCadastrado(email)) {
-      return res.status(400).json({ error: "Email já cadastrado" });
-    }
-    if (await validateUser.validateUserName(username)) {
-      return res.status(400).json({ error: "Usuário já com esse username" });
-    }
-
-    try {
-      const query = `UPDATE usuario SET email=?, username=?, name=?, biografia=? WHERE ID_user = ?`;
-      const values = [email, username, name, biografia, userId];
-      connect.query(query, values, function (err, results) {
-        if (err) {
-          if (err.code === "ER_DUP_ENTRY") {
-            return res.status(400).json({
-              error: "E-mail já cadastrado por outro usuário.",
-            });
-          } else {
-            console.error(err);
-            return res.status(500).json({ error: "Erro Interno do Servidor" });
-          }
-        }
-        if (results.affectedRows === 0) {
-          return res.status(404).json({ error: "Usuário não encontrado." });
-        }
-        return res
-          .status(200)
-          .json({ message: "Usuário atualizado com sucesso." });
-      });
-    } catch (error) {
-      console.error("Erro ao executar a consulta:", error);
-      return res.status(500).json({ error: "Erro Interno de Servidor" });
-    }
+  if (idCorreto !== userId) {
+    return res.status(400).json({ error: "Você não tem permissão de atualizar essa conta." });
   }
+  if (!email || !biografia || !username || !name) {
+    return res.status(400).json({ error: "Todos os campos são obrigatórios." });
+  }
+  if (!validateUser.validateDataEmail(email)) {
+    return res.status(400).json({ error: "Email inválido" });
+  }
+
+  try {
+    // 1) Carrega valores atuais do usuário
+    const selectQuery = "SELECT email, username FROM usuario WHERE ID_user = ? LIMIT 1";
+    const current = await new Promise((resolve, reject) => {
+      connect.query(selectQuery, [userId], (err, rows) => {
+        if (err) return reject(err);
+        resolve(rows && rows[0] ? rows[0] : null);
+      });
+    });
+    if (!current) {
+      return res.status(404).json({ error: "Usuário não encontrado." });
+    }
+
+    // 2) Se o email mudou, checa duplicidade excluindo o próprio ID
+    if (email !== current.email) {
+      const emailJaExiste = await validateUser.checkIfEmailCadastrado(email, userId);
+      if (emailJaExiste) {
+        return res.status(400).json({ error: "Email já cadastrado" });
+      }
+    }
+
+    // 3) Se o username mudou, checa duplicidade excluindo o próprio ID
+    if (username !== current.username) {
+      const usernameJaExiste = await validateUser.validateUserName(username, userId);
+      if (usernameJaExiste) {
+        return res.status(400).json({ error: "Usuário já com esse username" });
+      }
+    }
+
+    // 4) Atualiza
+    const query = `UPDATE usuario SET email=?, username=?, name=?, biografia=? WHERE ID_user = ?`;
+    const values = [email, username, name, biografia, userId];
+
+    connect.query(query, values, function (err, results) {
+      if (err) {
+        if (err.code === "ER_DUP_ENTRY") {
+          return res.status(400).json({ error: "E-mail já cadastrado por outro usuário." });
+        }
+        console.error(err);
+        return res.status(500).json({ error: "Erro Interno do Servidor" });
+      }
+      if (results.affectedRows === 0) {
+        return res.status(404).json({ error: "Usuário não encontrado." });
+      }
+      return res.status(200).json({ message: "Usuário atualizado com sucesso." });
+    });
+  } catch (error) {
+    console.error("Erro ao executar a consulta:", error);
+    return res.status(500).json({ error: "Erro Interno de Servidor" });
+  }
+}
+
 
   static async updateImagemUser(req, res) {
     const userId = String(req.params.id);
@@ -342,7 +381,7 @@ module.exports = class userController {
     if (idCorreto !== userId) {
       return res
         .status(400)
-        .json({ error: "Você não tem permissão de apagar esta conta" });
+        .json({ error: "Você não tem permissão de atualizar essa conta." });
     }
 
     if (arquivo.length !== 1) {
@@ -351,8 +390,8 @@ module.exports = class userController {
       });
     }
 
-    const tipo_imagem = arquivo.mimetype
-    const imagem = arquivo.buffer
+    const tipo_imagem = arquivo[0].mimetype
+    const imagem = arquivo[0].buffer
 
     try {
       const query = `UPDATE usuario SET imagem= ?, tipo_imagem=? WHERE ID_user = ?`;
@@ -361,6 +400,11 @@ module.exports = class userController {
         if (err) {
           console.error(err);
           return res.status(500).json({ error: "Erro Interno do Servidor" });
+        }
+        if(results.affectedRows === 0){
+          return res
+          .status(200)
+          .json({ message: "Usuário não encontrado." });
         }
         return res
           .status(200)
@@ -380,7 +424,7 @@ module.exports = class userController {
     if (idCorreto !== userId) {
       return res
         .status(400)
-        .json({ error: "Você não tem permissão de apagar esta conta" });
+        .json({ error: "Você não tem permissão de apagar essa conta." });
     }
     if (senha_atual === nova_senha) {
       return res.status(400).json({ error: "As senhas são iguais" });
@@ -439,7 +483,7 @@ module.exports = class userController {
     if (idCorreto !== userId) {
       return res
         .status(400)
-        .json({ error: "Você não tem permissão de apagar esta conta" });
+        .json({ error: "Você não tem permissão de apagar essa conta." });
     }
 
     const query = `DELETE FROM usuario WHERE ID_user = ?`;

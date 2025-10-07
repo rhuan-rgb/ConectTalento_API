@@ -1,4 +1,5 @@
 const connect = require("../db/connect");
+const validateProject = require("../services/validateProject");
 
 module.exports = class projectController {
   // CREATE
@@ -7,7 +8,7 @@ module.exports = class projectController {
     const { titulo, descricao } = req.body;
     const imagens = req.files;
 
-    if (!titulo || !descricao) {
+    if (!titulo || !descricao || !imagens) {
       return res.status(400).json({
         error:
           "Todos os campos devem ser preenchidos",
@@ -26,6 +27,11 @@ module.exports = class projectController {
         .status(400)
         .json({ error: "Você só pode inserir 5 imagens por projeto." });
     }
+
+    if (!await validateProject.validateProjectUserLength(ID_user)) {
+      return res.status(400).json({ error: "Usuário já excedeu o limite de projetos" });
+    }
+
 
     try {
       const queryProjeto = `INSERT INTO projeto (ID_user, titulo, descricao, criado_em) VALUES (?, ?, ?, NOW())`;
@@ -89,20 +95,19 @@ module.exports = class projectController {
     const imagens = req.files;
     const idCorreto = Number(req.userId);
     const ID_user = Number(req.body.ID_user)
-
-    console.log(imagens)
     
     if (idCorreto !== ID_user) {
       return res
         .status(400)
-        .json({ error: "Você não tem permissão de apagar esta conta" });
+        .json({ error: "Você não tem permissão de atualizar esse projeto." });
     }
 
     if (
       !ID_user ||
       !titulo ||
       !descricao ||
-      !ID_projeto
+      !ID_projeto || 
+      !imagens
     ) {
       return res.status(400).json({
         error:
@@ -132,7 +137,7 @@ module.exports = class projectController {
         }
         if (!result || result.length === 0) {
           return res.status(403).json({
-            error: "Você não tem permissão para atualizar este projeto.",
+            error: "Você não tem permissão para atualizar esse projeto.",
           });
         }
 
@@ -174,7 +179,7 @@ module.exports = class projectController {
             Promise.all(promises)
               .then(() => {
                 return res.status(200).json({
-                  message: "Projeto atualizar com sucesso!",
+                  message: "Projeto atualizado com sucesso!",
                   ID_projeto,
                 });
               })
@@ -215,10 +220,10 @@ module.exports = class projectController {
       connect.query(query, (err, results) => {
         if (err) {
           console.error(err);
-          return res.status(500).send("Erro no servidor.");
+          return res.status(500).json({ error: "Erro no servidor" });
         }
         if (!results || results.length === 0) {
-          return res.status(404).send("Projetos não encontrados.");
+          return res.status(404).json({ error: "Projetos não encontrados." });
         }
 
         const listaProjetos = results.map((proj) => {
@@ -248,7 +253,7 @@ module.exports = class projectController {
     const userName = req.params.user;
 
     if (!userName) {
-      return res.status(400).send("Usuário inválido.");
+      return res.status(404).json({ error: "Usuário inválido." });
     }
 
     try {
@@ -256,10 +261,10 @@ module.exports = class projectController {
       connect.query(queryID, [userName], (err, result) => {
         if (err) {
           console.error(err);
-          return res.status(500).send("Erro no servidor.");
+          return res.status(500).json({ error: "Erro no servidor" });
         }
         if (!result || result.length === 0) {
-          return res.status(404).send("Usuário não encontrado.");
+          return res.status(404).json({ error: "Usuário não encontrado." });
         }
 
         const ID_user = result[0].ID_user;
@@ -282,10 +287,10 @@ module.exports = class projectController {
         connect.query(query, [ID_user], (err, results) => {
           if (err) {
             console.error(err);
-            return res.status(500).send("Erro no servidor.");
+            return res.status(500).json({ error: "Erro no servidor" });
           }
           if (!results || results.length === 0) {
-            return res.status(404).send("Projetos não encontrados.");
+            return res.status(404).json({ error: "Projetos não encontrados." });
           }
 
           const listaProjetos = results.map((proj) => {
@@ -315,7 +320,7 @@ module.exports = class projectController {
     const ID_user = req.params.ID_user;
 
     if (!ID_user) {
-      return res.status(400).send("Usuário inválido.");
+      return res.status(400).json({ error: "Usuário inválido." });
     }
 
     try {
@@ -338,10 +343,10 @@ module.exports = class projectController {
       connect.query(query, [ID_user], (err, results) => {
         if (err) {
           console.error(err);
-          return res.status(500).send("Erro no servidor.");
+          return res.status(500).json({ error: "Erro no servidor" });
         }
         if (!results || results.length === 0) {
-          return res.status(404).send("Projetos não encontrados.");
+          return res.status(404).json({ error: "Projetos não encontrados." });
         }
 
         const listaProjetos = results.map((proj) => {
@@ -372,7 +377,7 @@ module.exports = class projectController {
     const ID_projeto = req.params.ID_projeto;
 
     if (!ID_projeto) {
-      return res.status(400).send("ID do projeto não foi fornecido");
+      return res.status(400).json({ error: "ID do projeto não foi fornecido" });
     }
 
     try {
@@ -400,10 +405,13 @@ module.exports = class projectController {
       connect.query(query, [ID_projeto], (err, results) => {
         if (err) {
           console.error(err);
-          return res.status(500).send("Erro no servidor.");
+          return res.status(500).json({ error: "Erro no servidor" });
         }
-        if (!results || results.length === 0) {
-          return res.status(404).send("Projeto não encontrado.");
+        if (!results) {
+          return res.status(404).json({ error: "Projeto não encontrado." });
+        }
+        if(results.length === 0) {
+          return res.status(404).json({ error: "Projeto não encontrado." });
         }
 
         const projetodetail = results[0];
@@ -451,13 +459,21 @@ module.exports = class projectController {
 
   // DELETE
   static async deleteProject(req, res) {
-    const id = req.params.ID_projeto;
+    const ID_projeto = req.params.ID_projeto;
+    const idCorreto = Number(req.userId);
+    const ID_user = Number(req.body.ID_user)
 
-    if (!id) return res.status(400).json({ error: "ID é obrigatório" });
+    if (idCorreto !== ID_user) {
+      return res
+        .status(400)
+        .json({ error: "Você não tem permissão de apagar essa conta" });
+    }
+
+    if (!ID_projeto) return res.status(400).json({ error: "ID é obrigatório" });
 
     try {
-      const query = `DELETE FROM projeto WHERE ID_projeto = ?`;
-      connect.query(query, [id], (err, result) => {
+      const query = `DELETE FROM projeto WHERE ID_projeto = ? AND ID_user = ?`;
+      connect.query(query, [ID_projeto, idCorreto], (err, result) => {
         if (err) {
           console.error(err);
           return res.status(500).json({ error: "Erro ao deletar projeto" });

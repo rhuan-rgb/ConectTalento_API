@@ -16,14 +16,14 @@ router.get("/user", userController.getAllUsers);
 router.get("/user/:user", userController.getUserByName);
 
 //Rotas projetoController
-router.post("/project/:ID_user", upload.array("imagens"), projectController.createProject);
-router.post("/like_dislike_projects", projectController.like_or_dislike_projects)
+router.post("/project/:ID_user", verifyJWT, upload.array("imagens"), projectController.createProject);
+router.post("/like_dislike_projects", verifyJWT, projectController.like_or_dislike_projects)
 router.get("/projects", projectController.getAllProjects);
 router.get("/projects/:user", projectController.getProjectsByUserName);
 router.get("/projectsliked/:ID_user", projectController.getProjectsLikedUser);
 router.get("/projectdetail/:ID_projeto", projectController.getProject);
-router.delete("/project/:ID_projeto", projectController.deleteProject);
-router.put("/project/:id",  upload.array("imagens"), verifyJWT, projectController.updateProject);
+router.delete("/project/:ID_projeto", verifyJWT, projectController.deleteProject);
+router.put("/project/:id", verifyJWT, upload.array("imagens"),projectController.updateProject);
 
 
 
