@@ -8,10 +8,12 @@ const projectController = require("../controllers/projectController");
 // Rotas userController
 router.post('/user', userController.createUser);
 router.post('/login', userController.loginUser);
+router.post("/pagamento-pix/:id", verifyJWT, userController.paymentUserPix)
 router.put('/user/:id', verifyJWT, userController.updateUser);
 router.put("/user/newpassword/:id", verifyJWT, userController.updatePassword);
 router.put("/user/imagem/:id", upload.array("imagens"), verifyJWT, userController.updateImagemUser)
 router.delete('/user/:id',verifyJWT, userController.deleteUser); 
+router.get("/pagamento/pix/status/:id/:paymentId", verifyJWT, userController.getPaymentPixStatus);
 router.get("/user", userController.getAllUsers);
 router.get("/user/:user", userController.getUserByName);
 

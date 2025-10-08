@@ -28,7 +28,7 @@ module.exports = class projectController {
         .json({ error: "Você só pode inserir 5 imagens por projeto." });
     }
 
-    if (!await validateProject.validateProjectUserLength(ID_user)) {
+    if (await validateProject.validateProjectUserLength(ID_user)) {
       return res.status(400).json({ error: "Usuário já excedeu o limite de projetos" });
     }
 
