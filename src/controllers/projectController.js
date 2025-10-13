@@ -532,4 +532,25 @@ module.exports = class projectController {
       }
     });
   }
+
+  static async searchProjects(req, res) {
+    const search = `%${req.query.q || ""}%`;
+
+    try {
+      const query = `SELECT * FROM projeto WHERE titulo LIKE ? ORDER BY titulo ASC`;
+
+      connect.query(query, [search], (err, results) => {
+        if (err) {
+          console.error(err);
+          console.log(err.message);
+          return res.status(500).json({ error: "Erro ao buscar projetos" });
+        }
+
+        return res.status(200).json(results);
+      });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ error: "Erro no servidor" });
+    }
+  }
 };
