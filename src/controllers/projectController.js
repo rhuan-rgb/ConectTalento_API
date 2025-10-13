@@ -230,14 +230,20 @@ module.exports = class projectController {
     });
   }
   static async searchProjects(req, res){
-    const search = req.query.q?.toLowerCase() || '';
+    const search = `%${req.query.q || ''}%`;
+    console.log(search);
+    
     try {
       // a correção está no gpt do rhuan09
-      const query = `SELECT * FROM projeto WHERE titulo = %?% ASC;`;
+      const query = `SELECT * FROM projeto WHERE titulo LIKE ? ORDER BY titulo ASC`;
 
-      connect.query(query, (err, results) => {
+      const formattedQuery = connect.format(query, [search]);
+      console.log(formattedQuery);
+
+      connect.query(query, [search], (err, results) => {
         if (err) {
           console.error(err);
+          console.log(err.message);
           return res.status(500).json({ error: "Erro ao buscar projetos" });
         }
 

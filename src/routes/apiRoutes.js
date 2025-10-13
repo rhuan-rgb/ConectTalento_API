@@ -20,12 +20,14 @@ router.get("/user/:user", userController.getUserByName);
 
 //Rotas projetoController
 router.post('/project', projectController.createProject);
+router.get("/project/search", projectController.searchProjects);
 router.get("/projects", projectController.getAllProjects);
 router.get("/projects/like", projectController.getAllProjectsOrderByTotalLikes);
 router.get("/project/:id", projectController.getProjectByIdUser);
 router.post("/project/like", projectController.like_or_dislike_projects);
 router.put("/project/:id", projectController.updateProject);
 router.delete("/project/:id", projectController.deleteProject);
+
 
 
 module.exports = router;
