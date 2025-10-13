@@ -83,7 +83,7 @@ CREATE TABLE `curtidas` (
   KEY `fk_curtida_user` (`ID_user`),
   KEY `fk_curtida_projeto` (`ID_projeto`),
   CONSTRAINT `fk_curtida_projeto` FOREIGN KEY (`ID_projeto`) REFERENCES `projeto` (`ID_projeto`) ON DELETE CASCADE,
-  CONSTRAINT `fk_curtida_user` FOREIGN KEY (`ID_user`) REFERENCES `usuario` (`ID_user`)
+  CONSTRAINT `fk_curtida_user` FOREIGN KEY (`ID_user`) REFERENCES `usuario` (`ID_user`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
