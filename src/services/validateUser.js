@@ -118,3 +118,4 @@ const validateUser = {
 };
 
 module.exports = validateUser;
+  
