@@ -1,31 +1,39 @@
 const router = require('express').Router();
-const verifyJWT = require("../services/verifyJWT"); 
+const verifyJWT = require("../services/verifyJWT"); // esperar para implementar
 const upload = require("../services/upload");
+
 const userController = require("../controllers/userController");
 const projectController = require("../controllers/projectController");
+const extraInfoController = require("../controllers/extraInfoController")
 
 // Rotas userController
 router.post('/user', userController.createUser);
 router.post('/login', userController.loginUser);
-router.put('/user/:id', verifyJWT, userController.updateUser);
+router.post("/pagamento-pix/:id", verifyJWT, userController.paymentUserPix)
+router.put('/user/:id', upload.array("imagens"), verifyJWT, userController.updateUser);
 router.put("/user/newpassword/:id", verifyJWT, userController.updatePassword);
 router.delete('/user/:id',verifyJWT, userController.deleteUser); 
+router.get("/pagamento/pix/status/:id/:paymentId", verifyJWT, userController.getPaymentPixStatus);
 router.get("/user", userController.getAllUsers);
 router.get("/user/:user", userController.getUserByName);
-
+router.get("/userId/:id", userController.getUserById);
 
 //Rotas projetoController
-router.post('/project', projectController.createProject);
-router.post("/project/:ID_user", upload.array("imagens"), projectController.createProject);
+router.post("/project/:ID_user", verifyJWT, upload.array("imagens"), projectController.createProject);
+router.post("/like_dislike_projects", verifyJWT, projectController.like_or_dislike_projects)
 router.get("/projects", projectController.getAllProjects);
-router.get("/project/:user", projectController.getProjectByUserName);
-router.get("/detalhes_project/:ID_projeto", projectController.getProject);
+router.get("/projects/:user", projectController.getProjectsByUserName);
+router.get("/projectsliked/:ID_user", projectController.getProjectsLikedUser);
+router.get("/projectdetail/:ID_projeto", projectController.getProject);
+router.get("/project/search", projectController.searchProjects);
+router.delete("/project/:ID_projeto", verifyJWT, projectController.deleteProject);
+router.put("/project/:id", verifyJWT, upload.array("imagens"),projectController.updateProject);
 
-// router.put("/project/:id", projectController.updateProject);
-// router.delete("/project/:id", projectController.deleteProject);
-
-// router.get("/project/image_ordem/:id_projeto", projectController.getImagemProjeto);
- 
+//Rotas extraInfoController
+router.post("/extrainfo", extraInfoController.createExtraInfo);
+router.get("/extrainfo/:id", extraInfoController.getExtraInfo);
+router.put("/extrainfo", extraInfoController.updateExtraInfo);
+router.delete("/extrainfo/:id", extraInfoController.deleteExtraInfo);
 
 
 

@@ -1,4 +1,5 @@
 const connect = require("../db/connect");
+const validateProject = require("../services/validateProject");
 
 module.exports = class projectController {
   // CREATE
@@ -7,10 +8,17 @@ module.exports = class projectController {
     const { titulo, descricao } = req.body;
     const imagens = req.files;
 
-    if (!titulo || !descricao || !imagens || imagens.length === 0) {
+    if (!titulo || !descricao || !imagens) {
       return res.status(400).json({
         error:
-          "Todos os campos devem ser preenchidos e pelo menos uma imagem deve ser enviada.",
+          "Todos os campos devem ser preenchidos",
+      });
+    }
+
+    if (imagens.length === 0){
+      return res.status(400).json({
+        error:
+          "Pelo menos uma imagem deve ser enviada.",
       });
     }
 
@@ -19,6 +27,11 @@ module.exports = class projectController {
         .status(400)
         .json({ error: "Você só pode inserir 5 imagens por projeto." });
     }
+
+    if (await validateProject.validateProjectUserLength(ID_user)) {
+      return res.status(400).json({ error: "Usuário já excedeu o limite de projetos" });
+    }
+
 
     try {
       const queryProjeto = `INSERT INTO projeto (ID_user, titulo, descricao, criado_em) VALUES (?, ?, ?, NOW())`;
@@ -75,6 +88,120 @@ module.exports = class projectController {
     }
   }
 
+  // UPDATE
+  static async updateProject(req, res) {
+    const ID_projeto = req.params.id;
+    const { titulo, descricao } = req.body;
+    const imagens = req.files;
+    const idCorreto = Number(req.userId);
+    const ID_user = Number(req.body.ID_user)
+    
+    if (idCorreto !== ID_user) {
+      return res
+        .status(400)
+        .json({ error: "Você não tem permissão de atualizar esse projeto." });
+    }
+
+    if (
+      !ID_user ||
+      !titulo ||
+      !descricao ||
+      !ID_projeto || 
+      !imagens
+    ) {
+      return res.status(400).json({
+        error:
+          "Todos os campos devem ser preenchidos",
+      });
+    }
+
+    if (imagens.length === 0){
+      return res.status(400).json({
+        error:
+          "Pelo menos uma imagem deve ser enviada.",
+      });
+    }
+
+    if (imagens.length > 5) {
+      return res
+        .status(400)
+        .json({ error: "Você só pode inserir 5 imagens por projeto." });
+    }
+
+    try {
+      const queryCheck = `SELECT 1 FROM projeto WHERE ID_projeto = ? AND ID_user = ? LIMIT 1`;
+      connect.query(queryCheck, [ID_projeto, ID_user], (err, result) => {
+        if (err) {
+          console.error(err);
+          return res.status(500).json({ error: "Erro ao atualizar projeto" });
+        }
+        if (!result || result.length === 0) {
+          return res.status(403).json({
+            error: "Você não tem permissão para atualizar esse projeto.",
+          });
+        }
+
+        try {
+          const queryUpdateProject = `UPDATE projeto SET titulo = ?, descricao = ? WHERE ID_projeto = ?`
+          connect.query(queryUpdateProject, [titulo, descricao, ID_projeto],(err, result)=>{
+            if (err) {
+              console.error(err);
+              return res.status(500).json({ error: "Erro ao atualizar projeto" });
+            }
+            if (result.affectedRows === 0){
+              return res.status(404).json({ error: "Projeto não encontrado" });
+            }
+
+            const promises = imagens.map((img, index) => {
+              console.log(img)
+              const ordem = index + 1;
+              const tipoImagem = img.mimetype;
+              const queryImagem = `UPDATE imagens SET imagem = ?, tipo_imagem = ?, ordem = ? WHERE ID_projeto = ? AND  ordem = ?`;
+    
+              return new Promise((resolve, reject) => {
+                connect.query(
+                  queryImagem,
+                  [ img.buffer, tipoImagem, ordem, ID_projeto, ordem ],
+                  (err, result) => {
+                    if (err) {
+                      console.error("Erro ao salvar imagem:", err);
+                      reject(err);
+                    } 
+                    if (result.affectedRows === 0){
+                      return res.status(404).json({ error: "Projeto não encontrado" });
+                    }
+                      resolve();
+                  }
+                );
+              });
+            });
+    
+            Promise.all(promises)
+              .then(() => {
+                return res.status(200).json({
+                  message: "Projeto atualizado com sucesso!",
+                  ID_projeto,
+                });
+              })
+              .catch((error) => {
+                console.error("Erro ao salvar", error);
+                return res
+                  .status(500)
+                  .json({ error: "Erro ao salvar as imagens." });
+              });
+
+          })
+        } catch (error) {
+          console.error(error);
+          return res.status(500).json({ error: "Erro no servidor" });
+        }    
+      });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ error: "Erro no servidor" });
+    }
+  }
+
   static async getAllProjects(req, res) {
     try {
       const query = `
@@ -86,17 +213,17 @@ module.exports = class projectController {
             i.tipo_imagem
           FROM projeto p
           LEFT JOIN imagens i 
-            ON p.ID_projeto = i.ID_projeto 
-          ORDER BY p.criado_em DESC; 
-        `; //mais nova ao mais antigo
+            ON p.ID_projeto = i.ID_projeto AND i.ordem = 1
+          ORDER BY p.criado_em DESC;
+        `;
 
       connect.query(query, (err, results) => {
         if (err) {
           console.error(err);
-          return res.status(500).send("Erro no servidor.");
+          return res.status(500).json({ error: "Erro no servidor" });
         }
         if (!results || results.length === 0) {
-          return res.status(404).send("Projetos não encontrados.");
+          return res.status(404).json({ error: "Projetos não encontrados." });
         }
 
         const listaProjetos = results.map((proj) => {
@@ -106,6 +233,7 @@ module.exports = class projectController {
           }
 
           return {
+            ID_projeto: proj.ID_projeto,
             titulo: proj.titulo,
             total_curtidas: proj.total_curtidas,
             imagem: imagemBase64,
@@ -121,11 +249,11 @@ module.exports = class projectController {
     }
   }
 
-  static async getProjectByUserName(req, res) {
+  static async getProjectsByUserName(req, res) {
     const userName = req.params.user;
 
     if (!userName) {
-      return res.status(400).send("Usuário inválido.");
+      return res.status(404).json({ error: "Usuário inválido." });
     }
 
     try {
@@ -133,10 +261,10 @@ module.exports = class projectController {
       connect.query(queryID, [userName], (err, result) => {
         if (err) {
           console.error(err);
-          return res.status(500).send("Erro no servidor.");
+          return res.status(500).json({ error: "Erro no servidor" });
         }
         if (!result || result.length === 0) {
-          return res.status(404).send("Usuário não encontrado.");
+          return res.status(404).json({ error: "Usuário não encontrado." });
         }
 
         const ID_user = result[0].ID_user;
@@ -159,10 +287,10 @@ module.exports = class projectController {
         connect.query(query, [ID_user], (err, results) => {
           if (err) {
             console.error(err);
-            return res.status(500).send("Erro no servidor.");
+            return res.status(500).json({ error: "Erro no servidor" });
           }
           if (!results || results.length === 0) {
-            return res.status(404).send("Projetos não encontrados.");
+            return res.status(404).json({ error: "Projetos não encontrados." });
           }
 
           const listaProjetos = results.map((proj) => {
@@ -188,36 +316,37 @@ module.exports = class projectController {
     }
   }
 
-  static async getProjectsLikeUser(req, res) {
-    const ID_user = req.params;
+  static async getProjectsLikedUser(req, res) {
+    const ID_user = req.params.ID_user;
 
     if (!ID_user) {
-      return res.status(400).send("Usuário inválido.");
+      return res.status(400).json({ error: "Usuário inválido." });
     }
 
-    const query = `
+    try {
+      const query = `
          SELECT
           c.ID_curtida,
           p.ID_projeto,
           p.titulo,
+          p.total_curtidas,
           i.ID_imagem,
           i.ordem,
           i.tipo_imagem,
-          i.imagem,
+          i.imagem
         FROM curtidas c
         JOIN projeto  p ON p.ID_projeto = c.ID_projeto
         JOIN imagens  i ON i.ID_projeto = p.ID_projeto AND i.ordem = 1
         JOIN usuario  u ON u.ID_user = p.ID_user
         WHERE c.ID_user = ?;`;
 
-    try {
       connect.query(query, [ID_user], (err, results) => {
         if (err) {
           console.error(err);
-          return res.status(500).send("Erro no servidor.");
+          return res.status(500).json({ error: "Erro no servidor" });
         }
         if (!results || results.length === 0) {
-          return res.status(404).send("Projetos não encontrados.");
+          return res.status(404).json({ error: "Projetos não encontrados." });
         }
 
         const listaProjetos = results.map((proj) => {
@@ -227,6 +356,7 @@ module.exports = class projectController {
           }
 
           return {
+            ID_projeto: proj.ID_projeto,
             titulo: proj.titulo,
             total_curtidas: proj.total_curtidas,
             imagem: imagemBase64,
@@ -247,7 +377,7 @@ module.exports = class projectController {
     const ID_projeto = req.params.ID_projeto;
 
     if (!ID_projeto) {
-      return res.status(400).send("ID do projeto não foi fornecido");
+      return res.status(400).json({ error: "ID do projeto não foi fornecido" });
     }
 
     try {
@@ -262,7 +392,8 @@ module.exports = class projectController {
           i.ID_imagem,
           i.ordem,
           u.name AS autor_nome,
-          u.imagem AS autor_imagem
+          u.imagem AS autor_imagem,
+          u.tipo_imagem AS autor_tipo_imagem
         FROM projeto p
         LEFT JOIN imagens i 
           ON p.ID_projeto = i.ID_projeto 
@@ -274,22 +405,34 @@ module.exports = class projectController {
       connect.query(query, [ID_projeto], (err, results) => {
         if (err) {
           console.error(err);
-          return res.status(500).send("Erro no servidor.");
+          return res.status(500).json({ error: "Erro no servidor" });
         }
-        if (!results || results.length === 0) {
-          return res.status(404).send("Projeto não encontrado.");
+        if (!results) {
+          return res.status(404).json({ error: "Projeto não encontrado." });
+        }
+        if(results.length === 0) {
+          return res.status(404).json({ error: "Projeto não encontrado." });
+        }
+
+        const projetodetail = results[0];
+
+        let imagemBase64 = null;
+        if (
+          projetodetail.autor_imagem &&
+          Buffer.isBuffer(projetodetail.autor_imagem)
+        ) {
+          imagemBase64 = projetodetail.imagem.toString("base64");
         }
 
         const projeto = {
-          ID_projeto: results[0].ID_projeto,
-          titulo: results[0].titulo,
-          descricao: results[0].descricao,
-          total_curtidas: results[0].total_curtidas,
+          ID_projeto: projetodetail.ID_projeto,
+          titulo: projetodetail.titulo,
+          descricao: projetodetail.descricao,
+          total_curtidas: projetodetail.total_curtidas,
           autor: {
-            nome: results[0].autor_nome,
-            imagem: results[0].autor_imagem
-              ? results[0].autor_imagem.toString("base64")
-              : null,
+            nome: projetodetail.autor_nome,
+            imagem: imagemBase64,
+            tipo_imagem: projetodetail.autor_tipo_imagem,
           },
           imagens: results
             .map((proj) => {
@@ -312,5 +455,81 @@ module.exports = class projectController {
       console.error(error);
       return res.status(500).json({ error: "Erro no servidor" });
     }
+  }
+
+  // DELETE
+  static async deleteProject(req, res) {
+    const ID_projeto = req.params.ID_projeto;
+    const idCorreto = Number(req.userId);
+    const ID_user = Number(req.body.ID_user)
+
+    if (idCorreto !== ID_user) {
+      return res
+        .status(400)
+        .json({ error: "Você não tem permissão de apagar essa conta" });
+    }
+
+    if (!ID_projeto) return res.status(400).json({ error: "ID é obrigatório" });
+
+    try {
+      const query = `DELETE FROM projeto WHERE ID_projeto = ? AND ID_user = ?`;
+      connect.query(query, [ID_projeto, idCorreto], (err, result) => {
+        if (err) {
+          console.error(err);
+          return res.status(500).json({ error: "Erro ao deletar projeto" });
+        }
+
+        if (result.affectedRows === 0) {
+          return res.status(404).json({ error: "Projeto não encontrado" });
+        }
+
+        return res
+          .status(200)
+          .json({ message: "Projeto deletado com sucesso" });
+      });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ error: "Erro no servidor" });
+    }
+  }
+
+  static async like_or_dislike_projects(req, res) {
+    const { ID_projeto, ID_user } = req.body;
+
+    let query = `SELECT * FROM curtidas WHERE ID_projeto = ? AND ID_user = ?;`;
+    connect.query(query, [ID_projeto, ID_user], (err, results) => {
+      if (err) {
+        console.log(err);
+        return res.status(400).json({ error: "erro ao buscar em curtidas" });
+      }
+
+      if (results.length > 0) {
+        // Já existe curtida -> deletar
+        query = `DELETE FROM curtidas WHERE ID_projeto = ? AND ID_user = ?;`;
+        connect.query(query, [ID_projeto, ID_user], (err, results) => {
+          if (err) {
+            console.log(err);
+            return res.status(400).json({ error: "erro ao deletar a curtida" });
+          }
+          return res.status(200).json({
+            message: "curtida deletada com sucesso.",
+            curtido: false,
+          });
+        });
+      } else {
+        // Não existe curtida -> inserir
+        query = `INSERT INTO curtidas (ID_projeto, ID_user) VALUES (?, ?);`;
+        connect.query(query, [ID_projeto, ID_user], (err, results) => {
+          if (err) {
+            console.log(err);
+            return res.status(400).json({ error: "erro ao inserir a curtida" });
+          }
+          return res.status(200).json({
+            message: "curtida inserida com sucesso.",
+            curtido: true,
+          });
+        });
+      }
+    });
   }
 };

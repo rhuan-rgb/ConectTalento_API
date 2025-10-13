@@ -1,6 +1,8 @@
 const connect = require("../db/connect");
 const jwt = require("jsonwebtoken");
 const validateUser = require("../services/validateUser");
+const bcrypt = require("bcrypt");
+const { MercadoPagoConfig, Payment } = require("mercadopago");
 
 module.exports = class userController {
   static async createUser(req, res) {
@@ -8,21 +10,22 @@ module.exports = class userController {
 
     // ===== Verificações simples =====
     if (!email || !password || !confirmPassword || !username || !name) {
-      return res.status(400).json({ error: "Todos os campos são obrigatórios." });
+      return res
+        .status(400)
+        .json({ error: "Todos os campos são obrigatórios." });
     }
     if (password !== confirmPassword) {
       return res.status(400).json({ error: "As senhas não coincidem" });
     }
     if (!validateUser.validateDataEmail(email)) {
       return res.status(400).json({ error: "Email inválido" });
-    } 
+    }
     if (await validateUser.checkIfEmailCadastrado(email)) {
       return res.status(400).json({ error: "Email já cadastrado" });
-    }     
+    }
     if (await validateUser.validateUserName(username)) {
       return res.status(400).json({ error: "Usuário já com esse username" });
     }
-
 
     if (code) {
       const codeOk = await validateUser.validateCode(email, code); // valida se o codigo é valido ou não
@@ -30,10 +33,13 @@ module.exports = class userController {
       if (codeOk === true) {
         try {
           // pega o usuário para ter o ID_user e montar o token
-          const qSelectUser = "SELECT ID_user, email, username, name, plano, criado_em FROM usuario WHERE email = ? LIMIT 1";
+          const qSelectUser =
+            "SELECT ID_user, email, username, name, plano, criado_em FROM usuario WHERE email = ? LIMIT 1";
           connect.query(qSelectUser, [email], (err, rows) => {
             if (err) {
-              return res.status(500).json({ error: "Erro ao buscar usuário.", err });
+              return res
+                .status(500)
+                .json({ error: "Erro ao buscar usuário.", err });
             }
             if (!rows.length) {
               return res.status(404).json({ error: "Usuário não encontrado." });
@@ -42,14 +48,21 @@ module.exports = class userController {
             const user = rows[0];
 
             // autentica o usuário
-            const qUpdate = "UPDATE usuario SET autenticado = true WHERE ID_user = ? LIMIT 1";
+            const qUpdate =
+              "UPDATE usuario SET autenticado = true WHERE ID_user = ? LIMIT 1";
             connect.query(qUpdate, [user.ID_user], (err2) => {
               if (err2) {
-                return res.status(500).json({ error: "Erro ao autenticar usuário.", err: err2 });
+                return res
+                  .status(500)
+                  .json({ error: "Erro ao autenticar usuário.", err: err2 });
               }
 
               // gera JWT
-              const token = jwt.sign({ ID_user: user.ID_user }, process.env.SECRET, { expiresIn: "1h" });
+              const token = jwt.sign(
+                { ID_user: user.ID_user },
+                process.env.SECRET,
+                { expiresIn: "1h" }
+              );
 
               return res.status(200).json({
                 message: "Código válido. Usuário autenticado.",
@@ -59,7 +72,9 @@ module.exports = class userController {
             });
           });
         } catch (error) {
-          return res.status(500).json({ error: "Erro interno do servidor.", error });
+          return res
+            .status(500)
+            .json({ error: "Erro interno do servidor.", error });
         }
       } else if (codeOk === "expirado") {
         return res.status(400).json({
@@ -75,9 +90,14 @@ module.exports = class userController {
 
         if (userExiste) {
           const ID_user = userExiste[0].ID_user;
-          const generatedCode = await validateUser.sendCodeToEmail(email, ID_user);
+          const generatedCode = await validateUser.sendCodeToEmail(
+            email,
+            ID_user
+          );
           if (!generatedCode) {
-            return res.status(500).json({ error: "Falha ao enviar o código. Tente novamente." });
+            return res
+              .status(500)
+              .json({ error: "Falha ao enviar o código. Tente novamente." });
           }
 
           return res.status(202).json({
@@ -90,21 +110,36 @@ module.exports = class userController {
         const insertSql =
           "INSERT INTO usuario (email, senha, username, name, autenticado, criado_em, plano) VALUES (?, ?, ?, ?, false, NOW(), false)";
 
-        connect.query(insertSql, [email, hashedPassword, username, name], async (err, result) => {
-          if (err) {
-            return res.status(500).json({ error: "Erro interno do servidor", err });
-          }
+        connect.query(
+          insertSql,
+          [email, hashedPassword, username, name],
+          async (err, result) => {
+            if (err) {
+              return res
+                .status(500)
+                .json({ error: "Erro interno do servidor", err });
+            }
 
-          const ID_user = result.insertId;
-          const generatedCode = await validateUser.sendCodeToEmail(email, ID_user);
-          if (!generatedCode) {
-            return res.status(500).json({ error: "Falha ao enviar o código. Tente novamente." });
-          }
+            const ID_user = result.insertId;
+            const generatedCode = await validateUser.sendCodeToEmail(
+              email,
+              ID_user
+            );
+            if (!generatedCode) {
+              return res
+                .status(500)
+                .json({ error: "Falha ao enviar o código. Tente novamente." });
+            }
 
-          return res.status(201).json({ message: "Código enviado ao e-mail." });
-        });
+            return res
+              .status(201)
+              .json({ message: "Código enviado ao e-mail." });
+          }
+        );
       } catch (error) {
-        return res.status(500).json({ error: "Erro interno do servidor", detail: error });
+        return res
+          .status(500)
+          .json({ error: "Erro interno do servidor", detail: error });
       }
     }
   }
@@ -135,7 +170,10 @@ module.exports = class userController {
         const user = results[0];
 
         // Verificar se a senha corresponde
-        const senhaValida = await validateUser.comparePassword(password, user.senha);
+        const senhaValida = await validateUser.comparePassword(
+          password,
+          user.senha
+        );
 
         if (!senhaValida) {
           return res.status(403).json({ error: "Senha Incorreta" });
@@ -165,7 +203,7 @@ module.exports = class userController {
   }
 
   static async getAllUsers(req, res) {
-    const query = `SELECT ID_user, email, autenticado, biografia, plano, username, name FROM usuario`;
+    const query = `SELECT * FROM usuario`;
 
     try {
       connect.query(query, function (err, results) {
@@ -173,9 +211,31 @@ module.exports = class userController {
           console.error(err);
           return res.status(500).json({ error: "Erro Interno do Servidor" });
         }
+
+        // Converte imagem binária em base64 para cada usuário
+        const users = results.map((user) => {
+          let imagemBase64 = null;
+          if (user.imagem && Buffer.isBuffer(user.imagem)) {
+            imagemBase64 = user.imagem.toString("base64");
+          }
+
+          return {
+            ID_user: user.ID_user,
+            email: user.email,
+            autenticado: user.autenticado,
+            biografia: user.biografia,
+            username: user.username,
+            name: user.name,
+            plano: user.plano,
+            criado_em: user.criado_em,
+            imagem: imagemBase64,
+            tipo_imagem: user.tipo_imagem,
+          };
+        });
+
         return res.status(200).json({
-          message: "Mostrando usuários: ",
-          users: results,
+          message: "Mostrando usuários:",
+          users,
         });
       });
     } catch (error) {
@@ -187,16 +247,18 @@ module.exports = class userController {
   static async getUserByName(req, res) {
     const userName = req.params.user;
 
-    if (!userName) {
+    if (!userName || typeof userName !== "string" || !userName.trim()) {
       return res.status(400).send("Usuário inválido.");
     }
 
     const sql = `
     SELECT
+      u.name,
       u.username,
       u.email,
       u.biografia,
-      u.imagem_user,
+      u.imagem,
+      u.tipo_imagem,
       e.link_insta,
       e.link_facebook,
       e.link_github,
@@ -212,18 +274,90 @@ module.exports = class userController {
     connect.query(sql, [userName], (err, results) => {
       if (err) {
         console.error(err);
-        return res.status(500).send("Erro no servidor.");
+        return res.status(500).json({ error: "Erro Interno do Servidor" });
       }
       if (results.length === 0) {
-        return res.status(404).send("Perfil não encontrado.");
+        return res.status(404).json({ error: "Perfil não encontrado." });
       }
 
       const user = results[0];
+
+      let imagemBase64 = null;
+      if (user.imagem && Buffer.isBuffer(user.imagem)) {
+        imagemBase64 = user.imagem.toString("base64");
+      }
+
       const profile = {
+        name: user.name,
         username: user.username,
         email: user.email,
         biografia: user.biografia,
-        imagem_user: user.imagem_user,
+        imagem: imagemBase64,
+        tipo_imagem: user.tipo_imagem,
+        extrainfo: {
+          link_insta: user.link_insta || null,
+          link_facebook: user.link_facebook || null,
+          link_github: user.link_github || null,
+          link_pinterest: user.link_pinterest || null,
+          numero_telefone: user.numero_telefone || null,
+        },
+      };
+
+      return res.status(200).json({ profile });
+    });
+  }
+
+  static async getUserById(req, res) {
+    const userID = req.params.id;
+    
+    if (!userID) {
+      return res.status(400).send("Todos os campos devem ser preenchidos");
+    }
+
+    const sql = `
+    SELECT
+      u.name,
+      u.username,
+      u.email,
+      u.biografia,
+      u.imagem,
+      u.tipo_imagem,
+      e.link_insta,
+      e.link_facebook,
+      e.link_github,
+      e.link_pinterest,
+      e.numero_telefone
+    FROM usuario u
+    LEFT JOIN extrainfo e
+      ON e.ID_user = u.ID_user
+    WHERE u.ID_user = ?
+    ORDER BY e.ID_extrainfo DESC
+    LIMIT 1;
+  `;
+
+    connect.query(sql, [userID], (err, results) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ error: "Erro Interno do Servidor" });
+      }
+      if (results.length === 0) {
+        return res.status(404).json({ error: "Perfil não encontrado." });
+      }
+
+      const user = results[0];
+
+      let imagemBase64 = null;
+      if (user.imagem && Buffer.isBuffer(user.imagem)) {
+        imagemBase64 = user.imagem.toString("base64");
+      }
+
+      const profile = {
+        name: user.name,
+        username: user.username,
+        email: user.email,
+        biografia: user.biografia,
+        imagem: imagemBase64,
+        tipo_imagem: user.tipo_imagem,
         extrainfo: {
           link_insta: user.link_insta || null,
           link_facebook: user.link_facebook || null,
@@ -240,51 +374,83 @@ module.exports = class userController {
   static async updateUser(req, res) {
     const userId = String(req.params.id);
     const idCorreto = String(req.userId);
+    const arquivo = req.files;
     const { email, biografia, username, name } = req.body;
-    const imagem = req.file?.buffer || null
-    const tipoImagem = req.file?.mimetype || null
 
-
+    console.log(arquivo, email,  biografia, username, name)
     if (idCorreto !== userId) {
       return res
         .status(400)
-        .json({ error: "Você não tem permissão de apagar esta conta" });
+        .json({ error: "Você não tem permissão de atualizar essa conta." });
     }
     if (!email || !biografia || !username || !name) {
-      return res.status(400).json({ error: "Todos os campos são obrigatórios." });
+      return res
+        .status(400)
+        .json({ error: "Todos os campos são obrigatórios." });
     }
     if (!validateUser.validateDataEmail(email)) {
       return res.status(400).json({ error: "Email inválido" });
-    } 
-    if (await validateUser.checkIfEmailCadastrado(email)) {
-      return res.status(400).json({ error: "Email já cadastrado" });
-    }     
-    if (await validateUser.validateUserName(username)) {
-      return res.status(400).json({ error: "Usuário já com esse username" });
-    }    
+    }
+    if(arquivo){
+      if (arquivo.length !== 1) {
+        return res.status(400).json({
+          error: "Coloque somente uma imagem",
+        });
+      }
+    }
+   
 
-    const query = `UPDATE usuario SET email=?, username=?, name=?, biografia=?, imagem=?, tipoImagem=? WHERE ID_user = ?`;
-    const values = [
-      email,
-      username,
-      name,
-      biografia,
-      imagem,
-      tipoImagem,
-      userId,
-    ];
+    const tipo_imagem = arquivo[0].mimetype;
+    const imagem = arquivo[0].buffer;
 
     try {
+      // Carrega valores atuais do usuário
+      const selectQuery =
+        "SELECT email, username FROM usuario WHERE ID_user = ? LIMIT 1";
+      const current = await new Promise((resolve, reject) => {
+        connect.query(selectQuery, [userId], (err, rows) => {
+          if (err) return reject(err);
+          resolve(rows && rows[0] ? rows[0] : null);
+        });
+      });
+      if (!current) {
+        return res.status(404).json({ error: "Usuário não encontrado." });
+      }
+
+      // Se o email mudou, checa duplicidade excluindo o próprio ID
+      if (email !== current.email) {
+        const emailJaExiste = await validateUser.checkIfEmailCadastrado(
+          email,
+          userId
+        );
+        if (emailJaExiste) {
+          return res.status(400).json({ error: "Email já cadastrado" });
+        }
+      }
+      if (username !== current.username) {
+        const usernameJaExiste = await validateUser.validateUserName(
+          username,
+          userId
+        );
+        if (usernameJaExiste) {
+          return res
+            .status(400)
+            .json({ error: "Usuário já com esse username" });
+        }
+      }
+
+      const query = `UPDATE usuario SET email=?, username=?, name=?, biografia=?, imagem= ?, tipo_imagem=? WHERE ID_user = ?`;
+      const values = [email, username, name, biografia, imagem, tipo_imagem, userId];
+
       connect.query(query, values, function (err, results) {
         if (err) {
           if (err.code === "ER_DUP_ENTRY") {
-            return res.status(400).json({
-              error: "E-mail já cadastrado por outro usuário.",
-            });
-          } else {
-            console.error(err);
-            return res.status(500).json({ error: "Erro Interno do Servidor" });
+            return res
+              .status(400)
+              .json({ error: "E-mail já cadastrado por outro usuário." });
           }
+          console.error(err);
+          return res.status(500).json({ error: "Erro Interno do Servidor" });
         }
         if (results.affectedRows === 0) {
           return res.status(404).json({ error: "Usuário não encontrado." });
@@ -299,7 +465,6 @@ module.exports = class userController {
     }
   }
 
-
   static async updatePassword(req, res) {
     const userId = String(req.params.id);
     const idCorreto = String(req.userId);
@@ -308,43 +473,50 @@ module.exports = class userController {
     if (idCorreto !== userId) {
       return res
         .status(400)
-        .json({ error: "Você não tem permissão de apagar esta conta" });
+        .json({ error: "Você não tem permissão de apagar essa conta." });
     }
-    if ( senha_atual === nova_senha) {
+    if (senha_atual === nova_senha) {
       return res.status(400).json({ error: "As senhas são iguais" });
     }
-  
+    if (!senha_atual || !nova_senha) {
+      return res
+        .status(400)
+        .json({ error: "Informe senha_atual e nova_senha" });
+    }
+
     try {
-      const querySelect = "SELECT password FROM usuario WHERE ID_user = ?";
+      const querySelect = "SELECT senha FROM usuario WHERE ID_user = ?";
       connect.query(querySelect, [userId], async (err, results) => {
         if (err) {
           console.error(err);
           return res.status(500).json({ error: "Erro ao buscar usuário" });
         }
-  
+
         if (results.length === 0) {
           return res.status(404).json({ error: "Usuário não encontrado" });
         }
-  
-        const senhaHashAtual = results[0].password;
-  
+
+        const senhaHashAtual = results[0].senha;
+
         // Verifica se a senha atual está correta
         const senhaCorreta = await bcrypt.compare(senha_atual, senhaHashAtual);
         if (!senhaCorreta) {
           return res.status(401).json({ error: "Senha atual incorreta" });
         }
-  
+
         // Gera hash da nova senha
-        const novaSenhaHash = await bcrypt.hash(nova_senha, SALT_ROUNDS);
-  
+        const novaSenhaHash = await validateUser.hashPassword(nova_senha);
+
         // Atualiza a senha no banco
-        const queryUpdate = "UPDATE usuario SET password = ? WHERE ID_user = ?";
+        const queryUpdate = "UPDATE usuario SET senha = ? WHERE ID_user = ?";
         connect.query(queryUpdate, [novaSenhaHash, userId], (err, result) => {
           if (err) {
             console.error(err);
             return res.status(500).json({ error: "Erro ao atualizar a senha" });
           }
-          return res.status(200).json({ message: "Senha atualizada com sucesso" });
+          return res
+            .status(200)
+            .json({ message: "Senha atualizada com sucesso" });
         });
       });
     } catch (error) {
@@ -360,7 +532,7 @@ module.exports = class userController {
     if (idCorreto !== userId) {
       return res
         .status(400)
-        .json({ error: "Você não tem permissão de apagar esta conta" });
+        .json({ error: "Você não tem permissão de apagar essa conta." });
     }
 
     const query = `DELETE FROM usuario WHERE ID_user = ?`;
@@ -387,4 +559,145 @@ module.exports = class userController {
     }
   }
 
+  static async paymentUserPix(req, res) {
+    const userId = String(req.params.id);
+    const idCorreto = String(req.userId);
+    const { email } = req.body;
+
+    if (idCorreto !== userId) {
+      return res
+        .status(400)
+        .json({
+          error: "Você não tem permissão de pagar um plano nessa conta.",
+        });
+    }
+    if (!email) {
+      return res.status(400).json({ error: "Email do pagador é obrigatório." });
+    }
+
+    try {
+      // 1) Configura o cliente do Mercado Pago com seu ACCESS_TOKEN (mantido no backend/.env)
+      const mpClient = new MercadoPagoConfig({
+        accessToken: process.env.ACCESS_TOKEN,
+        options: { timeout: 5000 },
+      });
+
+      // 2) Instancia a Payments API (diferente de Order)
+      const paymentsApi = new Payment(mpClient);
+
+      // 3) Referência curta para conciliar (<= 64 chars, sem espaços/acentos)
+      const externalReference = `plano_${userId}_${Date.now()}`
+        .replace(/[^a-zA-Z0-9_-]/g, "")
+        .slice(0, 64);
+
+      // 4) Body da Payments API (ATENÇÃO: aqui amount é number e os campos têm outros nomes)
+      const paymentBody = {
+        transaction_amount: 10.0, // number na Payments API
+        description: `Plano user:${userId}`, // descrição livre
+        payment_method_id: "pix", // PIX direto
+        payer: { email }, // e-mail do pagador (cliente)
+        external_reference: externalReference, // sua referência para conciliação
+      };
+
+      // 5) Idempotência para evitar duplicidade
+      const requestOptions = {
+        idempotencyKey: `pixpay-${userId}-${Date.now()}`,
+      };
+
+      // 6) Cria o pagamento PIX — a resposta já traz o QR
+      const pay = await paymentsApi.create({
+        body: paymentBody,
+        requestOptions,
+      });
+
+      // 7) Extrai o QR (copia e cola + imagem base64) do payment
+      const tx = pay?.point_of_interaction?.transaction_data || {};
+
+      return res.status(201).json({
+        ok: true,
+        payment_id: pay?.id, // este é o ID numérico do Payment
+        status: pay?.status || "pending",
+        amount: pay?.transaction_amount || 10.0,
+        qr_code: tx.qr_code || null, // copia e cola
+        qr_code_base64: tx.qr_code_base64 || null,
+        ticket_url: tx.ticket_url || null, // link do MP
+        // preferimos a data que o MP retornou; se vier vazio, devolvemos a que enviamos
+        expires_at: tx.qr_code_expiration_date,
+      });
+    } catch (error) {
+      console.error("MP PAYMENT ERROR:", error?.response?.data || error);
+      return res.status(500).json({ error: "Erro ao criar pagamento PIX." });
+    }
+  }
+
+  static async getPaymentPixStatus(req, res) {
+    const { id, paymentId } = req.params;
+    const idCorreto = String(req.userId);
+    const userId = String(id);
+    const mpPaymentId = String(paymentId || "").trim();
+
+    if (idCorreto !== userId) {
+      return res
+        .status(400)
+        .json({ error: "Você não tem permissão de consultar este pagamento." });
+    }
+    if (!mpPaymentId) {
+      return res.status(400).json({ error: "paymentId é obrigatório." });
+    }
+
+    try {
+      const mpClient = new MercadoPagoConfig({
+        accessToken: process.env.ACCESS_TOKEN,
+        options: { timeout: 5000 },
+      });
+
+      const paymentsApi = new Payment(mpClient);
+      const pay = await paymentsApi.get({ id: mpPaymentId });
+
+      const status = pay?.status; // 'approved', 'pending', 'rejected', ...
+      const status_detail = pay?.status_detail; // ex: 'accredited' p/ aprovado
+      const tx = pay?.point_of_interaction?.transaction_data || {};
+
+      // Se aprovado, ativa o plano
+      if (status === "approved") {
+        const q = "UPDATE usuario SET plano = TRUE WHERE ID_user = ? LIMIT 1";
+        connect.query(q, [idCorreto], (err) => {
+          if (err) {
+            console.error(err);
+            return res.status(200).json({
+              payment_id: mpPaymentId,
+              status,
+              status_detail,
+              updated: false,
+              amount: pay?.transaction_amount || null,
+              expires_at: tx.qr_code_expiration_date || null,
+            });
+          }
+          return res.status(200).json({
+            payment_id: mpPaymentId,
+            status,
+            status_detail,
+            updated: true,
+            amount: pay?.transaction_amount || null,
+            expires_at: tx.qr_code_expiration_date || null,
+          });
+        });
+        return;
+      }
+
+      // Para pending/rejected/cancelled/expired/...
+      return res.status(200).json({
+        payment_id: mpPaymentId,
+        status: status || "unknown",
+        status_detail: status_detail || null,
+        amount: pay?.transaction_amount || null,
+        expires_at: tx.qr_code_expiration_date || null,
+      });
+    } catch (error) {
+      console.error(error);
+      return res
+        .status(500)
+        .json({ error: "Erro ao consultar status do pagamento PIX." });
+    }
+  }
 };
