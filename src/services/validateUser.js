@@ -13,9 +13,8 @@ const validateUser = {
     return true;
   },
 
-  validateEmail: async function (email) {
-
-    const code = await sendMail(email);
+  sendCodeToEmail: async function (email, ID_user) {
+    const code = await sendMail(email, ID_user);
     if (code) {
       return code;
     } else {
@@ -23,9 +22,9 @@ const validateUser = {
     }
   },
 
-  checkIfEmailExists: async function (email) {
+  checkIfEmailCadastrado: async function (email) {
     return new Promise((resolve, reject) => {
-      const query = "SELECT id_usuario FROM usuario WHERE email = ? LIMIT 1";
+      const query = "SELECT ID_user FROM usuario WHERE email = ? AND autenticado = true LIMIT 1";
       connect.query(query, [email], (err, results) => {
         if (err) {
           return reject(err);
@@ -35,36 +34,61 @@ const validateUser = {
     });
   },
 
-
-  validateCode: function (userEmail, code) {
-    const query = `SELECT code, code_expira_em 
-                 FROM code_validacao 
-                 WHERE email = ? AND code = ? 
-                 LIMIT 1`;
-
+  checkIfEmailExiste: async function (email) {
     return new Promise((resolve, reject) => {
-      connect.query(query, [userEmail, code], (err, results) => {
+      const query = "SELECT ID_user FROM usuario WHERE email = ? AND autenticado IS NOT TRUE LIMIT 1";
+      connect.query(query, [email], (err, results) => {
         if (err) {
-          return resolve(false);
+          return reject(err);
+        }
+        if (results.length > 0) {
+          resolve(results)// true, passa o id se já existe,
+        } else {
+          resolve(false);  // false se não existe
         }
 
-        if (results.length === 0) {
-          return resolve(false); // nenhum código encontrado
+      });
+    });
+  },
+
+  validateUserName: async function (username) {
+    return new Promise((resolve, reject) => {
+      const query = "SELECT 1 FROM usuario WHERE username = ? AND autenticado = true LIMIT 1";
+      connect.query(query, [username], (err, results) => {
+        if (err) {
+          return reject(err);
         }
+        resolve(results.length > 0); // true se já existe, false se não existe
+      });
+    });
+  },
 
-        const now = new Date(Date.now());
-        const dbCode = results[0].code;
-        const expiresAt = results[0].code_expira_em;
+  validateCode: async function (userEmail, code) {
+    // 1) descobrir o ID_user a partir do e-mail
+    const idUser = await new Promise((resolve, reject) => {
+      const query = "SELECT ID_user FROM usuario WHERE email = ? LIMIT 1";
+      connect.query(query, [userEmail], (err, rows) => {
+        if (err) return reject(err);
+        if (!rows.length) return resolve(null);
+        resolve(rows[0].ID_user);
+      });
+    });
+    if (!idUser) return false;
 
-        if (expiresAt < now) {
-          return resolve("expirado"); // código vencido
-        }
+    // 2) conferir o código para esse ID_user
+    const query2 = `SELECT code, code_expira_em
+              FROM code_validacao
+              WHERE ID_user = ? AND code = ?
+              LIMIT 1`;
 
-        if (dbCode === code) {
-          return resolve(true); // válido
-        }
+    return new Promise((resolve) => {
+      connect.query(query2, [idUser, code], (err, rows) => {
+        if (err) return resolve(false);
+        if (!rows.length) return resolve(false);
 
-        return resolve(false);
+        const expiresAt = new Date(rows[0].code_expira_em);
+        if (expiresAt < new Date()) return resolve("expirado");
+        return resolve(true);
       });
     });
   },
@@ -91,10 +115,7 @@ const validateUser = {
       return false;
     }
   }
-
-
-
-
 };
 
 module.exports = validateUser;
+  
