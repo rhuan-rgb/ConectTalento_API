@@ -231,14 +231,10 @@ module.exports = class projectController {
   }
   static async searchProjects(req, res){
     const search = `%${req.query.q || ''}%`;
-    console.log(search);
     
     try {
       // a correção está no gpt do rhuan09
       const query = `SELECT * FROM projeto WHERE titulo LIKE ? ORDER BY titulo ASC`;
-
-      const formattedQuery = connect.format(query, [search]);
-      console.log(formattedQuery);
 
       connect.query(query, [search], (err, results) => {
         if (err) {

@@ -3,6 +3,7 @@ const verifyJWT = require("../services/verifyJWT"); // esperar para implementar
 
 const userController = require("../controllers/userController");
 const projectController = require("../controllers/projectController");
+const extraInfoController = require('../controllers/extraInfoController');
 
 // Rotas userController
 router.post('/user', userController.createUser);
@@ -27,6 +28,12 @@ router.get("/project/:id", projectController.getProjectByIdUser);
 router.post("/project/like", projectController.like_or_dislike_projects);
 router.put("/project/:id", projectController.updateProject);
 router.delete("/project/:id", projectController.deleteProject);
+
+//Rotas extraInfoController
+router.post("/extrainfo", extraInfoController.createExtraInfo);
+router.get("/extrainfo/:id", extraInfoController.getExtraInfo);
+router.put("/extrainfo", extraInfoController.updateExtraInfo);
+router.delete("/extrainfo/:id", extraInfoController.deleteExtraInfo);
 
 
 
