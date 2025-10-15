@@ -93,9 +93,6 @@ const validateUser = {
     });
   },
 
-  // número de "salt rounds" = custo computacional
-
-
   hashPassword: async function (password) {
     const saltRounds = 10;
     try {

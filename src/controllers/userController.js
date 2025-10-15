@@ -144,6 +144,92 @@ module.exports = class userController {
     }
   }
 
+  static async forgotPassword(req, res) {
+    const userId = String(req.params.id);
+    const idCorreto = String(req.userId);
+    const { email, password, confirmPassword, code } = req.body;
+
+    if (idCorreto !== userId) {
+      return res
+        .status(400)
+        .json({ error: "Você não tem permissão de trocar a senha nessa conta." });
+    }
+    if (!email) {
+      return res
+        .status(400)
+        .json({ error: "O email deve ser passado para o envio do código." });
+    }
+    if (!validateUser.validateDataEmail(email)) {
+      return res.status(400).json({ error: "Email inválido" });
+    }
+
+    if (!code) {
+      try {
+        const generatedCode = await validateUser.sendCodeToEmail(email, userId);
+        if (!generatedCode) {
+          return res
+            .status(500)
+            .json({ error: "Falha ao enviar o código. Tente novamente." });
+        }
+        return res
+          .status(201)
+          .json({ message: "Código enviado ao e-mail." });
+      } catch (error) {
+        console.error("Erro ao atualizar a senha:", error);
+        return res.status(500).json({ error: "Erro interno do servidor" });
+      }
+    }
+
+    if (code) {
+      const codeOk = await validateUser.validateCode(email, code); // valida se o codigo é valido ou não
+
+      if (codeOk === true) {
+
+        if (!password && !confirmPassword) {
+          return res.status(200).json({ message: "Código válido." });
+        }
+
+        if (!password || !confirmPassword) {
+          return res.status(400).json({ error: "Preencha todos os campos de senha." });
+        }
+
+        if (password !== confirmPassword) {
+          return res.status(400).json({ error: "As senhas não coincidem." });
+        }
+
+        try {
+          // Gera hash da nova senha
+          const novaSenhaHash = await validateUser.hashPassword(password);
+
+          const queryUpdate = "UPDATE usuario SET senha = ? WHERE ID_user = ?";
+
+          connect.query(queryUpdate, [novaSenhaHash, userId], (err, result) => {
+            if (err) {
+              console.error(err);
+              return res.status(500).json({ error: "Erro ao atualizar a senha" });
+            }
+            if (result.affectedRows === 0) {
+              return res.status(500).json({ error: "Usuário não encontrado" });
+            }
+            return res
+              .status(200)
+              .json({ message: "Senha atualizada com sucesso" });
+          });
+        } catch (error) {
+          console.error("Erro ao atualizar a senha:", error);
+          return res.status(500).json({ error: "Erro interno do servidor" });
+        }
+      } else if (codeOk === "expirado") {
+        return res.status(400).json({
+          error: "Código expirado. Tente reenviar o código novamente.",
+        });
+      } else {
+        return res.status(400).json({ error: "Código inválido." });
+      }
+    }
+  }
+
+
   static async loginUser(req, res) {
     const { email, password } = req.body;
 
@@ -309,7 +395,7 @@ module.exports = class userController {
 
   static async getUserById(req, res) {
     const userID = req.params.id;
-    
+
     if (!userID) {
       return res.status(400).send("Todos os campos devem ser preenchidos");
     }
@@ -377,7 +463,7 @@ module.exports = class userController {
     const arquivo = req.files;
     const { email, biografia, username, name } = req.body;
 
-    console.log(arquivo, email,  biografia, username, name)
+    console.log(arquivo, email, biografia, username, name)
     if (idCorreto !== userId) {
       return res
         .status(400)
@@ -391,14 +477,14 @@ module.exports = class userController {
     if (!validateUser.validateDataEmail(email)) {
       return res.status(400).json({ error: "Email inválido" });
     }
-    if(arquivo){
+    if (arquivo) {
       if (arquivo.length !== 1) {
         return res.status(400).json({
           error: "Coloque somente uma imagem",
         });
       }
     }
-   
+
 
     const tipo_imagem = arquivo[0].mimetype;
     const imagem = arquivo[0].buffer;
@@ -419,19 +505,13 @@ module.exports = class userController {
 
       // Se o email mudou, checa duplicidade excluindo o próprio ID
       if (email !== current.email) {
-        const emailJaExiste = await validateUser.checkIfEmailCadastrado(
-          email,
-          userId
-        );
+        const emailJaExiste = await validateUser.checkIfEmailCadastrado(email);
         if (emailJaExiste) {
           return res.status(400).json({ error: "Email já cadastrado" });
         }
       }
       if (username !== current.username) {
-        const usernameJaExiste = await validateUser.validateUserName(
-          username,
-          userId
-        );
+        const usernameJaExiste = await validateUser.validateUserName(username);
         if (usernameJaExiste) {
           return res
             .status(400)
@@ -473,7 +553,7 @@ module.exports = class userController {
     if (idCorreto !== userId) {
       return res
         .status(400)
-        .json({ error: "Você não tem permissão de apagar essa conta." });
+        .json({ error: "Você não tem permissão de atualizar essa conta." });
     }
     if (senha_atual === nova_senha) {
       return res.status(400).json({ error: "As senhas são iguais" });
@@ -481,7 +561,7 @@ module.exports = class userController {
     if (!senha_atual || !nova_senha) {
       return res
         .status(400)
-        .json({ error: "Informe senha_atual e nova_senha" });
+        .json({ error: "Informe sua senha atual e sua nova senha" });
     }
 
     try {
