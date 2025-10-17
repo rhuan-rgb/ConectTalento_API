@@ -147,7 +147,7 @@ module.exports = class userController {
   static async forgotPassword(req, res) {
     const userId = String(req.params.id);
     const idCorreto = String(req.userId);
-    const { email, password, confirmPassword, code } = req.body;
+    const { email, password, confirmPassword, code, atualizar } = req.body;
 
     if (idCorreto !== userId) {
       return res
@@ -157,10 +157,13 @@ module.exports = class userController {
     if (!email) {
       return res
         .status(400)
-        .json({ error: "O email deve ser passado para o envio do código." });
+        .json({ error: "O e-mail deve ser passado para o envio do código." });
     }
     if (!validateUser.validateDataEmail(email)) {
-      return res.status(400).json({ error: "Email inválido" });
+      return res.status(400).json({ error: "E-mail inválido" });
+    }
+    if (!await validateUser.checkIfEmailCadastrado(email)) {
+      return res.status(400).json({ error: "E-mail ainda não cadastrado" });
     }
 
     if (!code) {
@@ -185,46 +188,49 @@ module.exports = class userController {
 
       if (codeOk === true) {
 
-        if (!password && !confirmPassword) {
+        if (atualizar == false) {
           return res.status(200).json({ message: "Código válido." });
         }
 
-        if (!password || !confirmPassword) {
-          return res.status(400).json({ error: "Preencha todos os campos de senha." });
-        }
+        if (atualizar == true) {
+          
+          if (!password || !confirmPassword) {
+            return res.status(400).json({ error: "Preencha todos os campos de senha." });
+          }
 
-        if (password !== confirmPassword) {
-          return res.status(400).json({ error: "As senhas não coincidem." });
-        }
+          if (password !== confirmPassword) {
+            return res.status(400).json({ error: "As senhas não coincidem." });
+          }
 
-        try {
-          // Gera hash da nova senha
-          const novaSenhaHash = await validateUser.hashPassword(password);
+          try {
+            // Gera hash da nova senha
+            const novaSenhaHash = await validateUser.hashPassword(password);
 
-          const queryUpdate = "UPDATE usuario SET senha = ? WHERE ID_user = ?";
+            const queryUpdate = "UPDATE usuario SET senha = ? WHERE ID_user = ?";
 
-          connect.query(queryUpdate, [novaSenhaHash, userId], (err, result) => {
-            if (err) {
-              console.error(err);
-              return res.status(500).json({ error: "Erro ao atualizar a senha" });
-            }
-            if (result.affectedRows === 0) {
-              return res.status(500).json({ error: "Usuário não encontrado" });
-            }
-            return res
-              .status(200)
-              .json({ message: "Senha atualizada com sucesso" });
-          });
-        } catch (error) {
-          console.error("Erro ao atualizar a senha:", error);
-          return res.status(500).json({ error: "Erro interno do servidor" });
+            connect.query(queryUpdate, [novaSenhaHash, userId], (err, result) => {
+              if (err) {
+                console.error(err);
+                return res.status(500).json({ error: "Erro ao atualizar a senha" });
+              }
+              if (result.affectedRows === 0) {
+                return res.status(500).json({ error: "Usuário não encontrado" });
+              }
+              return res
+                .status(200)
+                .json({ message: "Senha atualizada com sucesso" });
+            });
+          } catch (error) {
+            console.error("Erro ao atualizar a senha:", error);
+            return res.status(500).json({ error: "Erro interno do servidor" });
+          }
         }
       } else if (codeOk === "expirado") {
         return res.status(400).json({
-          error: "Código expirado. Tente reenviar o código novamente.",
+          error: "Tempo expirado. Tente reenviar o código novamente.",
         });
       } else {
-        return res.status(400).json({ error: "Código inválido." });
+        return res.status(400).json({ error: "Inválido. Tente novamente" });
       }
     }
   }
