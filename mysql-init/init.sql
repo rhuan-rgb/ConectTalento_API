@@ -434,7 +434,7 @@ CREATE TABLE `usuario_log` (
   `imagem` longblob,
   `tipo_imagem` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `biografia` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
-  `senha` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `senha` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `plano` tinyint(1) NOT NULL,
   `username` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
   `criado_em` datetime NOT NULL,
