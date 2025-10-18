@@ -290,7 +290,7 @@ module.exports = class projectController {
             return res.status(500).json({ error: "Erro no servidor" });
           }
           if (!results || results.length === 0) {
-            return res.status(404).json({ error: "Projetos não encontrados." });
+            return res.status(200).json({ error: "Projetos não encontrados." });
           }
 
           const listaProjetos = results.map((proj) => {
@@ -300,6 +300,7 @@ module.exports = class projectController {
             }
 
             return {
+              ID_projeto: proj.ID_projeto,
               titulo: proj.titulo,
               total_curtidas: proj.total_curtidas,
               imagem: imagemBase64,
@@ -391,6 +392,7 @@ module.exports = class projectController {
           i.tipo_imagem,
           i.ID_imagem,
           i.ordem,
+          u.username,
           u.name AS autor_nome,
           u.imagem AS autor_imagem,
           u.tipo_imagem AS autor_tipo_imagem
@@ -431,6 +433,7 @@ module.exports = class projectController {
           total_curtidas: projetodetail.total_curtidas,
           autor: {
             nome: projetodetail.autor_nome,
+            username: projetodetail.username,
             imagem: imagemBase64,
             tipo_imagem: projetodetail.autor_tipo_imagem,
           },
