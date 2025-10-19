@@ -15,21 +15,33 @@ module.exports = class projectController {
       });
     }
 
-    if (imagens.length === 0){
-      return res.status(400).json({
-        error:
-          "Pelo menos uma imagem deve ser enviada.",
-      });
-    }
-
-    if (imagens.length > 5) {
-      return res
-        .status(400)
-        .json({ error: "Você só pode inserir 5 imagens por projeto." });
-    }
-
     if (await validateProject.validateProjectUserLength(ID_user)) {
       return res.status(400).json({ error: "Usuário já excedeu o limite de projetos" });
+    }
+
+    if (imagens) {
+      if (imagens.length === 0) {
+        return res.status(400).json({
+          error:
+            "Pelo menos uma imagem deve ser enviada.",
+        });
+      }
+
+      if (await validateProject.validateProjectUserPlano(ID_user)) {
+        if (imagens.length > 5) {
+          return res
+            .status(400)
+            .json({ error: "Você só pode inserir 5 imagens por projeto." });
+        }
+      }
+
+      if (!await validateProject.validateProjectUserPlano(ID_user)) {
+        if (imagens.length > 3) {
+          return res
+            .status(400)
+            .json({ error: "Limite de apenas 3 imagens. Assine o plano premium para inserir mais." });
+        }
+      }
     }
 
 
@@ -95,7 +107,7 @@ module.exports = class projectController {
     const imagens = req.files;
     const idCorreto = Number(req.userId);
     const ID_user = Number(req.body.ID_user)
-    
+
     if (idCorreto !== ID_user) {
       return res
         .status(400)
@@ -106,7 +118,7 @@ module.exports = class projectController {
       !ID_user ||
       !titulo ||
       !descricao ||
-      !ID_projeto || 
+      !ID_projeto ||
       !imagens
     ) {
       return res.status(400).json({
@@ -114,18 +126,29 @@ module.exports = class projectController {
           "Todos os campos devem ser preenchidos",
       });
     }
+    if (imagens) {
+      if (imagens.length === 0) {
+        return res.status(400).json({
+          error:
+            "Pelo menos uma imagem deve ser enviada.",
+        });
+      }
 
-    if (imagens.length === 0){
-      return res.status(400).json({
-        error:
-          "Pelo menos uma imagem deve ser enviada.",
-      });
-    }
+      if (await validateProject.validateProjectUserPlano(ID_user)) {
+        if (imagens.length > 5) {
+          return res
+            .status(400)
+            .json({ error: "Você só pode inserir 5 imagens por projeto." });
+        }
+      }
 
-    if (imagens.length > 5) {
-      return res
-        .status(400)
-        .json({ error: "Você só pode inserir 5 imagens por projeto." });
+      if (!await validateProject.validateProjectUserPlano(ID_user)) {
+        if (imagens.length > 3) {
+          return res
+            .status(400)
+            .json({ error: "Limite de apenas 3 imagens. Assine o plano premium para inserir mais." });
+        }
+      }
     }
 
     try {
@@ -143,12 +166,12 @@ module.exports = class projectController {
 
         try {
           const queryUpdateProject = `UPDATE projeto SET titulo = ?, descricao = ? WHERE ID_projeto = ?`
-          connect.query(queryUpdateProject, [titulo, descricao, ID_projeto],(err, result)=>{
+          connect.query(queryUpdateProject, [titulo, descricao, ID_projeto], (err, result) => {
             if (err) {
               console.error(err);
               return res.status(500).json({ error: "Erro ao atualizar projeto" });
             }
-            if (result.affectedRows === 0){
+            if (result.affectedRows === 0) {
               return res.status(404).json({ error: "Projeto não encontrado" });
             }
 
@@ -157,25 +180,25 @@ module.exports = class projectController {
               const ordem = index + 1;
               const tipoImagem = img.mimetype;
               const queryImagem = `UPDATE imagens SET imagem = ?, tipo_imagem = ?, ordem = ? WHERE ID_projeto = ? AND  ordem = ?`;
-    
+
               return new Promise((resolve, reject) => {
                 connect.query(
                   queryImagem,
-                  [ img.buffer, tipoImagem, ordem, ID_projeto, ordem ],
+                  [img.buffer, tipoImagem, ordem, ID_projeto, ordem],
                   (err, result) => {
                     if (err) {
                       console.error("Erro ao salvar imagem:", err);
                       reject(err);
-                    } 
-                    if (result.affectedRows === 0){
+                    }
+                    if (result.affectedRows === 0) {
                       return res.status(404).json({ error: "Projeto não encontrado" });
                     }
-                      resolve();
+                    resolve();
                   }
                 );
               });
             });
-    
+
             Promise.all(promises)
               .then(() => {
                 return res.status(200).json({
@@ -194,7 +217,7 @@ module.exports = class projectController {
         } catch (error) {
           console.error(error);
           return res.status(500).json({ error: "Erro no servidor" });
-        }    
+        }
       });
     } catch (error) {
       console.error(error);
@@ -223,7 +246,7 @@ module.exports = class projectController {
           return res.status(500).json({ error: "Erro no servidor" });
         }
         if (!results || results.length === 0) {
-          return res.status(404).json({ error: "Projetos não encontrados." });
+          return res.status(200).json({ error: "Projetos não encontrados." });
         }
 
         const listaProjetos = results.map((proj) => {
@@ -412,7 +435,7 @@ module.exports = class projectController {
         if (!results) {
           return res.status(404).json({ error: "Projeto não encontrado." });
         }
-        if(results.length === 0) {
+        if (results.length === 0) {
           return res.status(404).json({ error: "Projeto não encontrado." });
         }
 
