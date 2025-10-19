@@ -19,28 +19,24 @@ module.exports = class projectController {
       return res.status(400).json({ error: "Usuário já excedeu o limite de projetos" });
     }
 
-    if (imagens) {
-      if (imagens.length === 0) {
-        return res.status(400).json({
-          error:
-            "Pelo menos uma imagem deve ser enviada.",
-        });
-      }
+    const isPremium = await validateProject.validateProjectUserPlano(ID_user);
 
-      if (await validateProject.validateProjectUserPlano(ID_user)) {
-        if (imagens.length > 5) {
-          return res
-            .status(400)
-            .json({ error: "Você só pode inserir 5 imagens por projeto." });
-        }
+    if (isPremium) {
+      if (imagens.length > 5) {
+        return res
+          .status(400)
+          .json({ error: "Você só pode inserir 5 imagens por projeto." });
       }
+    }
 
-      if (!await validateProject.validateProjectUserPlano(ID_user)) {
-        if (imagens.length > 3) {
-          return res
-            .status(400)
-            .json({ error: "Limite de apenas 3 imagens. Assine o plano premium para inserir mais." });
-        }
+    if (!isPremium) {
+      if (imagens.length > 3) {
+        return res
+          .status(400)
+          .json({
+            error:
+              "Limite de apenas 3 imagens. Assine o plano premium para inserir mais.",
+          });
       }
     }
 
@@ -100,6 +96,7 @@ module.exports = class projectController {
     }
   }
 
+  // UPDATE
   static async updateProject(req, res) {
     const ID_projeto = req.params.id;
     const { titulo, descricao } = req.body;
@@ -113,7 +110,13 @@ module.exports = class projectController {
         .json({ error: "Você não tem permissão de atualizar esse projeto." });
     }
 
-    if (!ID_user || !titulo || !descricao || !ID_projeto || !imagens) {
+    if (
+      !ID_user ||
+      !titulo ||
+      !descricao ||
+      !ID_projeto ||
+      !imagens
+    ) {
       return res.status(400).json({
         error: "Todos os campos devem ser preenchidos",
       });
@@ -126,21 +129,21 @@ module.exports = class projectController {
         });
       }
 
-      if (await validateProject.validateProjectUserPlano(ID_user)) {
-        if (imagens.length > 5) {
-          return res
-            .status(400)
-            .json({ error: "Você só pode inserir 5 imagens por projeto." });
-        }
+      const isPremium = await validateProject.validateProjectUserPlano(ID_user);
+
+      if (isPremium && imagens.length > 5) {
+        return res
+          .status(400)
+          .json({ error: "Você só pode inserir 5 imagens por projeto." });
       }
 
-      if (!await validateProject.validateProjectUserPlano(ID_user)) {
-        if (imagens.length > 3) {
-          return res.status(400).json({
+      if (!isPremium && imagens.length > 3) {
+        return res
+          .status(400)
+          .json({
             error:
               "Limite de apenas 3 imagens. Assine o plano premium para inserir mais.",
           });
-        }
       }
     }
 
@@ -172,38 +175,45 @@ module.exports = class projectController {
               }
 
               const promises = imagens.map((img, index) => {
-                console.log(img);
                 const ordem = index + 1;
                 const tipoImagem = img.mimetype;
                 const buffer = img.buffer;
 
-                const sqlUpdate = `UPDATE imagens SET imagem = ?, tipo_imagem = ?, ordem = ? WHERE ID_projeto = ? AND ordem = ?`;
-                const sqlInsert = `INSERT INTO imagens (imagem, tipo_imagem, ordem, ID_projeto) VALUES (?, ?, ?, ?)`;
+                const queryUpdateImagem = `
+                UPDATE imagens
+                   SET imagem = ?, tipo_imagem = ?, ordem = ?
+                 WHERE ID_projeto = ? AND ordem = ?
+              `;
 
                 return new Promise((resolve, reject) => {
-                  // Primeiro tenta atualizar a posição (ordem) existente
                   connect.query(
-                    sqlUpdate,
+                    queryUpdateImagem,
                     [buffer, tipoImagem, ordem, ID_projeto, ordem],
-                    (errUpd, resUpd) => {
-                      if (errUpd) {
-                        console.error("Erro ao salvar imagem (update):", errUpd);
-                        return reject(errUpd);
+                    (err, updateResult) => {
+                      if (err) {
+                        console.error("Erro ao atualizar imagem:", err);
+                        return reject(err);
                       }
 
-                      if (resUpd && resUpd.affectedRows > 0) {
-                        // Atualizou uma imagem existente nessa ordem
+                      if (updateResult.affectedRows > 0) {
                         return resolve();
                       }
 
-                      // Se não havia registro nessa ordem, faz INSERT (UPSERT manual)
+                      // Se não havia linha nessa ordem, insere
+                      const queryInsertImagem = `
+                      INSERT INTO imagens (imagem, tipo_imagem, ordem, ID_projeto)
+                      VALUES (?, ?, ?, ?)
+                    `;
                       connect.query(
-                        sqlInsert,
+                        queryInsertImagem,
                         [buffer, tipoImagem, ordem, ID_projeto],
-                        (errIns) => {
-                          if (errIns) {
-                            console.error("Erro ao salvar imagem (insert):", errIns);
-                            return reject(errIns);
+                        (err, insertResult) => {
+                          if (err) {
+                            console.error("Erro ao inserir imagem:", err);
+                            return reject(err);
+                          }
+                          if (!insertResult || insertResult.affectedRows === 0) {
+                            return reject(new Error("Falha ao salvar imagem."));
                           }
                           return resolve();
                         }
@@ -215,13 +225,30 @@ module.exports = class projectController {
 
               Promise.all(promises)
                 .then(() => {
-                  return res.status(200).json({
-                    message: "Projeto atualizado com sucesso!",
-                    ID_projeto,
+                  // 🔴 Aqui está a correção para o seu caso:
+                  // remove imagens excedentes quando o usuário enviou menos do que existia
+                  const novoTotal = imagens.length;
+                  const deleteQuery = `
+                  DELETE FROM imagens
+                   WHERE ID_projeto = ?
+                     AND ordem > ?
+                `;
+                  connect.query(deleteQuery, [ID_projeto, novoTotal], (err) => {
+                    if (err) {
+                      console.error("Erro ao remover imagens antigas:", err);
+                      return res
+                        .status(500)
+                        .json({ error: "Erro ao remover imagens antigas." });
+                    }
+
+                    return res.status(200).json({
+                      message: "Projeto atualizado com sucesso!",
+                      ID_projeto,
+                    });
                   });
                 })
                 .catch((error) => {
-                  console.error("Erro ao salvar as imagens:", error);
+                  console.error("Erro ao salvar imagens:", error);
                   return res
                     .status(500)
                     .json({ error: "Erro ao salvar as imagens." });
@@ -238,7 +265,6 @@ module.exports = class projectController {
       return res.status(500).json({ error: "Erro no servidor" });
     }
   }
-
 
   static async getAllProjects(req, res) {
     try {
