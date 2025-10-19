@@ -30,6 +30,23 @@ const validateProject = {
         });
     },
 
+    validateProjectUserPlano: async function (ID_user) {
+        return new Promise((resolve, reject) => {
+            const query = `
+                    SELECT 
+                        u.plano
+                    FROM usuario u
+                    WHERE u.ID_user = ?
+                    LIMIT 1
+                    `;
+            connect.query(query, [ID_user], (err, results) => {
+                if (err) return reject(err);
+                const plano = !!results[0].plano
+                resolve(plano);
+            })
+        })
+    }
+
 }
 
 module.exports = validateProject;

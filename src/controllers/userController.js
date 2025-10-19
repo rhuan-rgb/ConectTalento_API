@@ -351,6 +351,7 @@ module.exports = class userController {
       u.biografia,
       u.imagem,
       u.tipo_imagem,
+      u.plano,
       e.link_insta,
       e.link_facebook,
       e.link_github,
@@ -386,6 +387,7 @@ module.exports = class userController {
         biografia: user.biografia,
         imagem: imagemBase64,
         tipo_imagem: user.tipo_imagem,
+        plano: user.plano,
         extrainfo: {
           link_insta: user.link_insta || null,
           link_facebook: user.link_facebook || null,
@@ -414,6 +416,7 @@ module.exports = class userController {
       u.biografia,
       u.imagem,
       u.tipo_imagem,
+      u.plano,
       e.link_insta,
       e.link_facebook,
       e.link_github,
@@ -450,6 +453,7 @@ module.exports = class userController {
         biografia: user.biografia,
         imagem: imagemBase64,
         tipo_imagem: user.tipo_imagem,
+        plano: user.plano,
         extrainfo: {
           link_insta: user.link_insta || null,
           link_facebook: user.link_facebook || null,
@@ -469,7 +473,6 @@ module.exports = class userController {
     const arquivo = req.files;
     const { email, biografia, username, name } = req.body;
 
-    console.log(arquivo, email, biografia, username, name)
     if (idCorreto !== userId) {
       return res
         .status(400)
@@ -483,17 +486,12 @@ module.exports = class userController {
     if (!validateUser.validateDataEmail(email)) {
       return res.status(400).json({ error: "Email inválido" });
     }
-    if (arquivo) {
-      if (arquivo.length !== 1) {
-        return res.status(400).json({
-          error: "Coloque somente uma imagem",
-        });
-      }
+    if (arquivo?.length > 1) {
+      return res.status(400).json({ error: "Coloque somente uma imagem" });
     }
 
-
-    const tipo_imagem = arquivo[0].mimetype;
-    const imagem = arquivo[0].buffer;
+    const tipo_imagem = arquivo?.[0]?.mimetype ?? null;
+    const imagem = arquivo?.[0]?.buffer ?? null;
 
     try {
       // Carrega valores atuais do usuário
@@ -678,7 +676,7 @@ module.exports = class userController {
 
       // 4) Body da Payments API (ATENÇÃO: aqui amount é number e os campos têm outros nomes)
       const paymentBody = {
-        transaction_amount: 10.0, // number na Payments API
+        transaction_amount: 0.1, // number na Payments API
         description: `Plano user:${userId}`, // descrição livre
         payment_method_id: "pix", // PIX direto
         payer: { email }, // e-mail do pagador (cliente)
