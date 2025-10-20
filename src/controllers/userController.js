@@ -145,93 +145,124 @@ module.exports = class userController {
   }
 
   static async forgotPassword(req, res) {
-    const userId = String(req.params.id);
-    const idCorreto = String(req.userId);
     const { email, password, confirmPassword, code, atualizar } = req.body;
 
-    if (idCorreto !== userId) {
-      return res
-        .status(400)
-        .json({ error: "Você não tem permissão de trocar a senha nessa conta." });
-    }
     if (!email) {
       return res
         .status(400)
         .json({ error: "O e-mail deve ser passado para o envio do código." });
     }
+
     if (!validateUser.validateDataEmail(email)) {
       return res.status(400).json({ error: "E-mail inválido" });
     }
-    if (!await validateUser.checkIfEmailCadastrado(email)) {
+
+    if (!(await validateUser.checkIfEmailCadastrado(email))) {
       return res.status(400).json({ error: "E-mail ainda não cadastrado" });
     }
 
-    if (!code) {
-      try {
+    try {
+      // Se não enviou código, gera e envia
+      if (!code) {
+        const [user] = await new Promise((resolve, reject) => {
+          connect.query(
+            "SELECT ID_user FROM usuario WHERE email = ? LIMIT 1",
+            [email],
+            (err, results) => {
+              if (err) return reject(err);
+              resolve(results);
+            }
+          );
+        });
+
+        if (!user) {
+          return res.status(404).json({ error: "Usuário não encontrado" });
+        }
+
+        const userId = user.ID_user;
+
         const generatedCode = await validateUser.sendCodeToEmail(email, userId);
+
         if (!generatedCode) {
           return res
             .status(500)
             .json({ error: "Falha ao enviar o código. Tente novamente." });
         }
-        return res
-          .status(201)
-          .json({ message: "Código enviado ao e-mail." });
-      } catch (error) {
-        console.error("Erro ao atualizar a senha:", error);
-        return res.status(500).json({ error: "Erro interno do servidor" });
+
+        return res.status(201).json({ message: "Código enviado ao e-mail." });
       }
-    }
 
-    if (code) {
-      const codeOk = await validateUser.validateCode(email, code); // valida se o codigo é valido ou não
+      // Se enviou código, valida e atualiza senha se necessário
+      if (code) {
+        const codeOk = await validateUser.validateCode(email, code);
 
-      if (codeOk === true) {
-
-        if (atualizar == false) {
-          return res.status(200).json({ message: "Código válido." });
-        }
-
-        if (atualizar == true) {
-          
-          if (!password || !confirmPassword) {
-            return res.status(400).json({ error: "Preencha todos os campos de senha." });
+        if (codeOk === true) {
+          if (!atualizar) {
+            return res.status(200).json({ message: "Código válido." });
           }
 
-          if (password !== confirmPassword) {
-            return res.status(400).json({ error: "As senhas não coincidem." });
-          }
+          if (atualizar) {
+            if (!password || !confirmPassword) {
+              return res
+                .status(400)
+                .json({ error: "Preencha todos os campos de senha." });
+            }
 
-          try {
-            // Gera hash da nova senha
+            if (password !== confirmPassword) {
+              return res
+                .status(400)
+                .json({ error: "As senhas não coincidem." });
+            }
+
+            // Busca ID do usuário
+            const [user] = await new Promise((resolve, reject) => {
+              connect.query(
+                "SELECT ID_user FROM usuario WHERE email = ? LIMIT 1",
+                [email],
+                (err, results) => {
+                  if (err) return reject(err);
+                  resolve(results);
+                }
+              );
+            });
+
+            if (!user) {
+              return res.status(404).json({ error: "Usuário não encontrado" });
+            }
+
+            const userId = user.ID_user;
+
             const novaSenhaHash = await validateUser.hashPassword(password);
 
-            const queryUpdate = "UPDATE usuario SET senha = ? WHERE ID_user = ?";
-
-            connect.query(queryUpdate, [novaSenhaHash, userId], (err, result) => {
-              if (err) {
-                console.error(err);
-                return res.status(500).json({ error: "Erro ao atualizar a senha" });
-              }
-              if (result.affectedRows === 0) {
-                return res.status(500).json({ error: "Usuário não encontrado" });
-              }
-              return res
-                .status(200)
-                .json({ message: "Senha atualizada com sucesso" });
+            await new Promise((resolve, reject) => {
+              connect.query(
+                "UPDATE usuario SET senha = ? WHERE ID_user = ?",
+                [novaSenhaHash, userId],
+                (err, result) => {
+                  if (err) return reject(err);
+                  if (result.affectedRows === 0) {
+                    return reject(new Error("Usuário não encontrado"));
+                  }
+                  resolve(result);
+                }
+              );
             });
-          } catch (error) {
-            console.error("Erro ao atualizar a senha:", error);
-            return res.status(500).json({ error: "Erro interno do servidor" });
+
+            return res
+              .status(200)
+              .json({ message: "Senha atualizada com sucesso" });
           }
+        } else if (codeOk === "expirado") {
+          return res.status(400).json({
+            error: "Tempo expirado. Tente reenviar o código novamente.",
+          });
+        } else {
+          return res.status(400).json({ error: "Código inválido. Tente novamente." });
         }
-      } else if (codeOk === "expirado") {
-        return res.status(400).json({
-          error: "Tempo expirado. Tente reenviar o código novamente.",
-        });
-      } else {
-        return res.status(400).json({ error: "Inválido. Tente novamente" });
       }
+    } catch (error) {
+      console.error("Erro na função forgotPassword:", error);
+      return res.status(500).json({ error: "Erro interno do servidor" });
     }
   }
 
