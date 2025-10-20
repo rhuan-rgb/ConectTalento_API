@@ -21,6 +21,10 @@ module.exports = class projectController {
 
     const isPremium = await validateProject.validateProjectUserPlano(ID_user);
 
+    if(imagens.length === 0){
+      return res.status(400).json({ error: "Coloque no mínimo uma imagem" });
+    }
+
     if (isPremium) {
       if (imagens.length > 5) {
         return res
