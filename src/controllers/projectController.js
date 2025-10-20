@@ -487,7 +487,7 @@ module.exports = class projectController {
           projetodetail.autor_imagem &&
           Buffer.isBuffer(projetodetail.autor_imagem)
         ) {
-          imagemBase64 = projetodetail.imagem.toString("base64");
+          imagemBase64 = projetodetail.autor_imagem.toString("base64");
         }
 
         const projeto = {
