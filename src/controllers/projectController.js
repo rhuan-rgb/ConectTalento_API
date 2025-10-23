@@ -608,15 +608,26 @@ module.exports = class projectController {
     const search = `%${req.query.q || ""}%`;
 
     try {
-      const query = `SELECT * FROM projeto WHERE titulo LIKE ? ORDER BY titulo ASC`;
-
+      const query = `
+          SELECT 
+            p.ID_projeto,
+            p.titulo,
+            p.total_curtidas,
+            i.imagem,
+            i.tipo_imagem
+          FROM projeto p
+          LEFT JOIN imagens i 
+            ON p.ID_projeto = i.ID_projeto AND i.ordem = 1
+          WHERE titulo LIKE ? ORDER BY p.criado_em DESC;
+        `;
+      console.log("passou aqui")
       connect.query(query, [search], (err, results) => {
         if (err) {
           console.error(err);
           console.log(err.message);
           return res.status(500).json({ error: "Erro ao buscar projetos" });
         }
-
+        console.log(connect.format(query, [search]));
         return res.status(200).json(results);
       });
     } catch (error) {
