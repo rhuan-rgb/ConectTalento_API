@@ -31,10 +31,8 @@ router.delete("/project/:ID_projeto", verifyJWT, projectController.deleteProject
 router.put("/project/:id", verifyJWT, upload.array("imagens"),projectController.updateProject);
 
 //Rotas extraInfoController
-router.post("/extrainfo", extraInfoController.createExtraInfo);
 router.get("/extrainfo/:id", extraInfoController.getExtraInfo);
-router.put("/extrainfo", extraInfoController.updateExtraInfo);
-router.delete("/extrainfo/:id", extraInfoController.deleteExtraInfo);
+router.put("/extrainfo", verifyJWT, extraInfoController.updateExtraInfo);
 
 
 

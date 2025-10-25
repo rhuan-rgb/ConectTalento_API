@@ -33,9 +33,9 @@ module.exports = class userController {
       if (codeOk === true) {
         try {
           // pega o usuário para ter o ID_user e montar o token
-          const qSelectUser =
+          const querySelectUser =
             "SELECT ID_user, email, username, name, plano, criado_em FROM usuario WHERE email = ? LIMIT 1";
-          connect.query(qSelectUser, [email], (err, rows) => {
+          connect.query(querySelectUser, [email], (err, rows) => {
             if (err) {
               return res
                 .status(500)
@@ -48,27 +48,36 @@ module.exports = class userController {
             const user = rows[0];
 
             // autentica o usuário
-            const qUpdate =
+            const queryUpdate =
               "UPDATE usuario SET autenticado = true WHERE ID_user = ? LIMIT 1";
-            connect.query(qUpdate, [user.ID_user], (err2) => {
+            connect.query(queryUpdate, [user.ID_user], (err2) => {
               if (err2) {
                 return res
                   .status(500)
                   .json({ error: "Erro ao autenticar usuário.", err: err2 });
               }
 
-              // gera JWT
-              const token = jwt.sign(
-                { ID_user: user.ID_user },
-                process.env.SECRET,
-                { expiresIn: "1h" }
-              );
+              const queryExtrainfo = "INSERT INTO extrainfo (link_insta, link_facebook, link_github, link_pinterest, numero_telefone, ID_user) VALUES (null, null, null, null, null, ?);";
+              connect.query(queryExtrainfo, [user.ID_user], (err3) => {
+                if (err3) {
+                  return res
+                    .status(500)
+                    .json({ error: "Erro ao inserir informações extra para o usuário.", err: err3 });
+                }
 
-              return res.status(200).json({
-                message: "Código válido. Usuário autenticado.",
-                user: { ...user, autenticado: true }, // não retorna senha
-                token,
-              });
+                // gera JWT
+                const token = jwt.sign(
+                  { ID_user: user.ID_user },
+                  process.env.SECRET,
+                  { expiresIn: "1h" }
+                );
+
+                return res.status(200).json({
+                  message: "Código válido. Usuário autenticado.",
+                  user: { ...user, autenticado: true },
+                  token,
+                });
+              })
             });
           });
         } catch (error) {

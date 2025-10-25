@@ -69,9 +69,11 @@ module.exports = class extraInfoController {
             console.error(err);
             return res.status(500).json({ error: "Erro ao criar extrainfo" });
           }
+          if (results.affectedRows === 0) {
+            return res.status(404).json({ error: "extrainfo não encontrada" });
+          }
           return res.status(201).json({
           message: "extrainfo atualizado com sucesso",
-          results,
         }); 
         }
       );
@@ -98,32 +100,6 @@ module.exports = class extraInfoController {
         }
 
         return res.status(200).json(results[0]);
-      });
-    } catch (error) {
-      console.error(error);
-      return res.status(500).json({ error: "Erro no servidor" });
-    }
-  }
-  static async deleteExtraInfo(req, res) {
-    const id  = req.params.id;
-
-    if (!id) return res.status(400).json({ error: "ID é obrigatório" });
-
-    try {
-      const query = `DELETE FROM extrainfo WHERE ID_user = ?`;
-      connect.query(query, [id], (err, result) => {
-        if (err) {
-          console.error(err);
-          return res.status(500).json({ error: "Erro ao deletar extrainfo" });
-        }
-
-        if (result.affectedRows === 0) {
-          return res.status(404).json({ error: "extrainfo não encontrada" });
-        }
-
-        return res
-          .status(200)
-          .json({ message: "extrainfo deletada com sucesso" });
       });
     } catch (error) {
       console.error(error);
