@@ -741,12 +741,10 @@ module.exports = class userController {
         ok: true,
         payment_id: pay?.id, // este é o ID numérico do Payment
         status: pay?.status || "pending",
-        amount: pay?.transaction_amount || 10.0,
+        amount: pay?.transaction_amount || 0.1,
         qr_code: tx.qr_code || null, // copia e cola
         qr_code_base64: tx.qr_code_base64 || null,
         ticket_url: tx.ticket_url || null, // link do MP
-        // preferimos a data que o MP retornou; se vier vazio, devolvemos a que enviamos
-        expires_at: tx.qr_code_expiration_date,
       });
     } catch (error) {
       console.error("MP PAYMENT ERROR:", error?.response?.data || error);
@@ -779,7 +777,6 @@ module.exports = class userController {
       const pay = await paymentsApi.get({ id: mpPaymentId });
 
       const status = pay?.status; // 'approved', 'pending', 'rejected', ...
-      const status_detail = pay?.status_detail; // ex: 'accredited' p/ aprovado
       const tx = pay?.point_of_interaction?.transaction_data || {};
 
       // Se aprovado, ativa o plano
@@ -791,19 +788,15 @@ module.exports = class userController {
             return res.status(200).json({
               payment_id: mpPaymentId,
               status,
-              status_detail,
               updated: false,
-              amount: pay?.transaction_amount || null,
-              expires_at: tx.qr_code_expiration_date || null,
+              amount: pay?.transaction_amount ,
             });
           }
           return res.status(200).json({
             payment_id: mpPaymentId,
             status,
-            status_detail,
             updated: true,
-            amount: pay?.transaction_amount || null,
-            expires_at: tx.qr_code_expiration_date || null,
+            amount: pay?.transaction_amount,
           });
         });
         return;
@@ -813,9 +806,7 @@ module.exports = class userController {
       return res.status(200).json({
         payment_id: mpPaymentId,
         status: status || "unknown",
-        status_detail: status_detail || null,
-        amount: pay?.transaction_amount || null,
-        expires_at: tx.qr_code_expiration_date || null,
+        amount: pay?.transaction_amount,
       });
     } catch (error) {
       console.error(error);
