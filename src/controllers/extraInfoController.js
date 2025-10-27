@@ -1,46 +1,6 @@
 const connect = require("../db/connect");
 
 module.exports = class extraInfoController {
-  static async createExtraInfo(req, res) {
-    const {
-      link_insta,
-      link_facebook,
-      link_github,
-      link_pinterest,
-      numero_telefone,
-      ID_user,
-    } = req.body;
-
-    const query =
-      "INSERT INTO extrainfo (link_insta, link_facebook,link_github, link_pinterest, numero_telefone, ID_user) VALUES (?, ?, ?, ?, ?, ?);";
-
-    try {
-      connect.query(
-        query,
-        [
-          link_insta,
-          link_facebook,
-          link_github,
-          link_pinterest,
-          numero_telefone,
-          ID_user,
-        ],
-        (err, results) => {
-          if (err) {
-            console.error(err);
-            return res.status(500).json({ error: "Erro ao criar extrainfo" });
-          }
-          return res.status(201).json({
-          message: "extrainfo criado com sucesso",
-          results,
-        }); 
-        }
-      );
-    } catch (error) {
-        console.error(error);
-      return res.status(500).json({ error: "Erro no servidor" });
-    }
-  }
   static async updateExtraInfo(req,res){
     const {
       link_insta,
@@ -67,7 +27,7 @@ module.exports = class extraInfoController {
         (err, results) => {
           if (err) {
             console.error(err);
-            return res.status(500).json({ error: "Erro ao criar extrainfo" });
+            return res.status(500).json({ error: "Erro ao atualizar extrainfo" });
           }
           if (results.affectedRows === 0) {
             return res.status(404).json({ error: "extrainfo não encontrada" });
