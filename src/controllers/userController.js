@@ -57,12 +57,14 @@ module.exports = class userController {
                   .json({ error: "Erro ao autenticar usuário.", err: err2 });
               }
 
-              const queryExtrainfo = "INSERT INTO extrainfo (link_insta, link_facebook, link_github, link_pinterest, numero_telefone, ID_user) VALUES (null, null, null, null, null, ?);";
+              const queryExtrainfo =
+                "INSERT INTO extrainfo (link_insta, link_facebook, link_github, link_pinterest, numero_telefone, ID_user) VALUES (null, null, null, null, null, ?);";
               connect.query(queryExtrainfo, [user.ID_user], (err3) => {
                 if (err3) {
-                  return res
-                    .status(500)
-                    .json({ error: "Erro ao inserir informações extra para o usuário.", err: err3 });
+                  return res.status(500).json({
+                    error: "Erro ao inserir informações extra para o usuário.",
+                    err: err3,
+                  });
                 }
 
                 // gera JWT
@@ -77,7 +79,7 @@ module.exports = class userController {
                   user: { ...user, autenticado: true },
                   token,
                 });
-              })
+              });
             });
           });
         } catch (error) {
@@ -266,7 +268,9 @@ module.exports = class userController {
             error: "Tempo expirado. Tente reenviar o código novamente.",
           });
         } else {
-          return res.status(400).json({ error: "Código inválido. Tente novamente." });
+          return res
+            .status(400)
+            .json({ error: "Código inválido. Tente novamente." });
         }
       }
     } catch (error) {
@@ -274,7 +278,6 @@ module.exports = class userController {
       return res.status(500).json({ error: "Erro interno do servidor" });
     }
   }
-
 
   static async loginUser(req, res) {
     const { email, password } = req.body;
@@ -420,6 +423,8 @@ module.exports = class userController {
         imagemBase64 = user.imagem.toString("base64");
       }
 
+      
+
       const profile = {
         name: user.name,
         username: user.username,
@@ -564,7 +569,15 @@ module.exports = class userController {
       }
 
       const query = `UPDATE usuario SET email=?, username=?, name=?, biografia=?, imagem= ?, tipo_imagem=? WHERE ID_user = ?`;
-      const values = [email, username, name, biografia, imagem, tipo_imagem, userId];
+      const values = [
+        email,
+        username,
+        name,
+        biografia,
+        imagem,
+        tipo_imagem,
+        userId,
+      ];
 
       connect.query(query, values, function (err, results) {
         if (err) {
@@ -689,11 +702,9 @@ module.exports = class userController {
     const { email } = req.body;
 
     if (idCorreto !== userId) {
-      return res
-        .status(400)
-        .json({
-          error: "Você não tem permissão de pagar um plano nessa conta.",
-        });
+      return res.status(400).json({
+        error: "Você não tem permissão de pagar um plano nessa conta.",
+      });
     }
     if (!email) {
       return res.status(400).json({ error: "Email do pagador é obrigatório." });
@@ -716,7 +727,7 @@ module.exports = class userController {
 
       // 4) Body da Payments API (ATENÇÃO: aqui amount é number e os campos têm outros nomes)
       const paymentBody = {
-        transaction_amount: 0.1, // number na Payments API
+        transaction_amount: 0.01, // number na Payments API
         description: `Plano user:${userId}`, // descrição livre
         payment_method_id: "pix", // PIX direto
         payer: { email }, // e-mail do pagador (cliente)
@@ -741,7 +752,7 @@ module.exports = class userController {
         ok: true,
         payment_id: pay?.id, // este é o ID numérico do Payment
         status: pay?.status || "pending",
-        amount: pay?.transaction_amount || 0.1,
+        amount: pay?.transaction_amount || 0.01,
         qr_code: tx.qr_code || null, // copia e cola
         qr_code_base64: tx.qr_code_base64 || null,
         ticket_url: tx.ticket_url || null, // link do MP
@@ -789,7 +800,7 @@ module.exports = class userController {
               payment_id: mpPaymentId,
               status,
               updated: false,
-              amount: pay?.transaction_amount ,
+              amount: pay?.transaction_amount,
             });
           }
           return res.status(200).json({
