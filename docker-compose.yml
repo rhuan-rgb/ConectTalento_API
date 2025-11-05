@@ -6,7 +6,10 @@ services:
     ports:
       - "5000:5000"
     volumes:
-      - .:/usr/app
+      - .:/usr/app # Monta o diretório da máquina no container
+      - /etc/letsencrypt:/etc/letsencrypt # Monta o volume dos certificados
+    working_dir: /usr/app # Define o diretório de trabalho dentro do container
+
     depends_on:
       - db
   db:
@@ -18,9 +21,8 @@ services:
     ports:
       - "3307:3307"
     volumes:
-      - .:/usr/app # Monta o diretório da máquina no container
-      - /etc/letsencrypt:/etc/letsencrypt # Monta o volume dos certificados
-    working_dir: /usr/app # Define o diretório de trabalho dentro do container
+      - db_data:/var/lib/mysql
+      - ./mysql-init:/docker-entrypoint-initdb.d
 
 volumes:
   db_data:
