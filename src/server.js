@@ -5,8 +5,8 @@ const app = require("./index");
 
 // Opções para o HTTPS com os certificados gerados
 const options = {
-  key: fs.readFileSync('/etc/letsencrypt/live/api-conectalento.eastus2.cloudapp.azure.com//privkey.pem'),
-  cert: fs.readFileSync('/etc/letsencrypt/live/api-conectalento.eastus2.cloudapp.azure.com//fullchain.pem')
+  key: fs.readFileSync('/etc/letsencrypt/live/api-conectalento.eastus2.cloudapp.azure.com/privkey.pem'),
+  cert: fs.readFileSync('/etc/letsencrypt/live/api-conectalento.eastus2.cloudapp.azure.com/fullchain.pem')
 };
 
 // Iniciar o servidor HTTPS na porta 5000
