@@ -126,6 +126,14 @@ module.exports = class userController {
           [email, hashedPassword, username, name],
           async (err, result) => {
             if (err) {
+              if (
+                err.code == "ER_DUP_ENTRY" &&
+                err.sqlMessage.includes("'usuario.username'")
+              ) {
+                return res
+                  .status(500)
+                  .json({ error: "username já existe", detail: err });
+              }
               return res
                 .status(500)
                 .json({ error: "Erro interno do servidor", err });
@@ -423,8 +431,6 @@ module.exports = class userController {
         imagemBase64 = user.imagem.toString("base64");
       }
 
-      
-
       const profile = {
         name: user.name,
         username: user.username,
@@ -516,7 +522,7 @@ module.exports = class userController {
     const userId = String(req.params.id);
     const idCorreto = String(req.userId);
     const arquivo = req.files;
-    const { email, biografia, username, name } = req.body;
+    const { email, biografia, username, name, code } = req.body;
 
     if (idCorreto !== userId) {
       return res
@@ -556,7 +562,9 @@ module.exports = class userController {
       if (email !== current.email) {
         const emailJaExiste = await validateUser.checkIfEmailCadastrado(email);
         if (emailJaExiste) {
-          return res.status(400).json({ error: "Email já cadastrado" });
+          return res
+            .status(400)
+            .json({ error: "Email já cadastrado por outro usuário" });
         }
       }
       if (username !== current.username) {
@@ -568,34 +576,101 @@ module.exports = class userController {
         }
       }
 
-      const query = `UPDATE usuario SET email=?, username=?, name=?, biografia=?, imagem= ?, tipo_imagem=? WHERE ID_user = ?`;
-      const values = [
-        email,
-        username,
-        name,
-        biografia,
-        imagem,
-        tipo_imagem,
-        userId,
-      ];
-
-      connect.query(query, values, function (err, results) {
-        if (err) {
-          if (err.code === "ER_DUP_ENTRY") {
+      //se o email for mudado, deve-se verificá-lo com um código
+      if (email !== current.email) {
+        if (!code) {
+          const generatedCode = await validateUser.sendCodeToEmail(
+            email,
+            userId
+          );
+          if (!generatedCode) {
             return res
-              .status(400)
-              .json({ error: "E-mail já cadastrado por outro usuário." });
+              .status(500)
+              .json({ error: "Falha ao enviar o código. Tente novamente." });
           }
-          console.error(err);
-          return res.status(500).json({ error: "Erro Interno do Servidor" });
+
+          return res.status(202).json({
+            message: "Código enviado ao email.",
+          });
+        } 
+          const codeOk = await validateUser.validateCode(current.email, code); // valida se o codigo é valido ou não
+          if (codeOk) {
+            const query = `UPDATE usuario SET email=?, username=?, name=?, biografia=?, imagem= ?, tipo_imagem=? WHERE ID_user = ?`;
+            const values = [
+              email,
+              username,
+              name,
+              biografia,
+              imagem,
+              tipo_imagem,
+              userId,
+            ];
+
+            connect.query(query, values, function (err, results) {
+              if (err) {
+                if (err.code === "ER_DUP_ENTRY") {
+                  return res
+                    .status(400)
+                    .json({ error: "E-mail já cadastrado por outro usuário." });
+                }
+                console.error(err);
+                return res
+                  .status(500)
+                  .json({ error: "Erro Interno do Servidor" });
+              }
+              if (results.affectedRows === 0) {
+                return res
+                  .status(404)
+                  .json({ error: "Usuário não encontrado." });
+              }
+              return res
+                .status(200)
+                .json({ message: "Usuário atualizado com sucesso." });
+            });
+            return
+        } else if (codeOk === "expirado") {
+          return res.status(400).json({
+            error: "Código expirado. Tente cadastrar-se novamente.",
+          });
+        } else {
+          console.log(codeOk);
+          return res.status(400).json({ error: "Código inválido." });
         }
-        if (results.affectedRows === 0) {
-          return res.status(404).json({ error: "Usuário não encontrado." });
-        }
-        return res
-          .status(200)
-          .json({ message: "Usuário atualizado com sucesso." });
-      });
+      } else {
+        const query = `UPDATE usuario SET email=?, username=?, name=?, biografia=?, imagem= ?, tipo_imagem=? WHERE ID_user = ?`;
+            const values = [
+              email,
+              username,
+              name,
+              biografia,
+              imagem,
+              tipo_imagem,
+              userId,
+            ];
+
+            connect.query(query, values, function (err, results) {
+              if (err) {
+                if (err.code === "ER_DUP_ENTRY") {
+                  return res
+                    .status(400)
+                    .json({ error: "E-mail já cadastrado por outro usuário." });
+                }
+                console.error(err);
+                return res
+                  .status(500)
+                  .json({ error: "Erro Interno do Servidor" });
+              }
+              if (results.affectedRows === 0) {
+                return res
+                  .status(404)
+                  .json({ error: "Usuário não encontrado." });
+              }
+              return res
+                .status(200)
+                .json({ message: "Usuário atualizado com sucesso." });
+            });
+            return
+      }
     } catch (error) {
       console.error("Erro ao executar a consulta:", error);
       return res.status(500).json({ error: "Erro Interno de Servidor" });
