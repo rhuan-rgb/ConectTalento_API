@@ -27,7 +27,7 @@ CREATE TABLE usuario (
 CREATE TABLE projeto (
   ID_projeto   INT PRIMARY KEY AUTO_INCREMENT,
   titulo       VARCHAR(150) NOT NULL,
-  descricao    VARCHAR(255) NOT NULL,
+  descricao    TEXT NOT NULL,
   total_curtidas INT DEFAULT 0,
   criado_em    DATETIME NOT NULL,
   ID_user      INT NOT NULL,
@@ -110,7 +110,7 @@ CREATE TABLE imagens_log (
 CREATE TABLE projeto_log (
   ID_projeto  INT PRIMARY KEY AUTO_INCREMENT,
   titulo      VARCHAR(150) NOT NULL,
-  descricao   VARCHAR(255) NOT NULL,
+  descricao   TEXT NOT NULL,
   total_curtidas INT NOT NULL,
   data_deletado DATETIME NOT NULL,
   ID_user     INT NOT NULL
