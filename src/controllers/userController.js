@@ -522,14 +522,14 @@ module.exports = class userController {
     const userId = String(req.params.id);
     const idCorreto = String(req.userId);
     const arquivo = req.files;
-    const { email, biografia, username, name, code } = req.body;
+    const { email, biografia, username_, name, code } = req.body;
 
     if (idCorreto !== userId) {
       return res
         .status(400)
         .json({ error: "Você não tem permissão de atualizar essa conta." });
     }
-    if (!email || !biografia || !username || !name) {
+    if (!email || !biografia || !username_ || !name) {
       return res
         .status(400)
         .json({ error: "Todos os campos são obrigatórios." });
@@ -540,6 +540,8 @@ module.exports = class userController {
     if (arquivo?.length > 1) {
       return res.status(400).json({ error: "Coloque somente uma imagem" });
     }
+
+    const username = username_.trim();
 
     const tipo_imagem = arquivo?.[0]?.mimetype ?? null;
     const imagem = arquivo?.[0]?.buffer ?? null;
