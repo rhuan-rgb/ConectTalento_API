@@ -1,11 +1,11 @@
 services:
   app:
     ## O ponto indica que imagem do docker sera construida no diretorio atual
-    build: . 
+    build: .
     command: /bin/sh -c "npm install && npm start"
     ports:
       - "5000:5000"
-    volumes: 
+    volumes:
       - .:/usr/app
     depends_on:
       - db
@@ -16,10 +16,11 @@ services:
       MYSQL_ROOT_PASSWORD: 190991
       MYSQL_DATABASE: conectalento
     ports:
-     - "3307:3307"
-    volumes: 
-      - db_data:/var/lib/mysql
-      - ./mysql-init:/docker-entrypoint-initdb.d
+      - "3307:3307"
+    volumes:
+      - .:/usr/app # Monta o diretório da máquina no container
+      - /etc/letsencrypt:/etc/letsencrypt # Monta o volume dos certificados
+    working_dir: /usr/app # Define o diretório de trabalho dentro do container
 
 volumes:
   db_data:
