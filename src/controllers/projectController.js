@@ -624,11 +624,28 @@ module.exports = class projectController {
       connect.query(query, [search], (err, results) => {
         if (err) {
           console.error(err);
-          console.log(err.message);
           return res.status(500).json({ error: "Erro ao buscar projetos" });
         }
-        console.log(connect.format(query, [search]));
-        return res.status(200).json(results);
+        if (!results || results.length === 0) {
+          return res.status(200).json({ error: "Projetos não encontrados." });
+        }
+
+        const listaProjetos = results.map((proj) => {
+          let imagemBase64 = null;
+          if (proj.imagem && Buffer.isBuffer(proj.imagem)) {
+            imagemBase64 = proj.imagem.toString("base64");
+          }
+
+          return {
+            ID_projeto: proj.ID_projeto,
+            titulo: proj.titulo,
+            total_curtidas: proj.total_curtidas,
+            imagem: imagemBase64,
+            tipo_imagem: proj.tipo_imagem,
+          };
+        });
+
+        return res.status(200).json({ profile_projeto: listaProjetos });
       });
     } catch (error) {
       console.error(error);
