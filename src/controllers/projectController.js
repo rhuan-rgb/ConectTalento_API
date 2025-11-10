@@ -10,18 +10,19 @@ module.exports = class projectController {
 
     if (!titulo || !descricao || !imagens) {
       return res.status(400).json({
-        error:
-          "Todos os campos devem ser preenchidos",
+        error: "Todos os campos devem ser preenchidos",
       });
     }
 
     if (await validateProject.validateProjectUserLength(ID_user)) {
-      return res.status(400).json({ error: "Usuário já excedeu o limite de projetos" });
+      return res
+        .status(400)
+        .json({ error: "Usuário já excedeu o limite de projetos" });
     }
 
     const isPremium = await validateProject.validateProjectUserPlano(ID_user);
 
-    if(imagens.length === 0){
+    if (imagens.length === 0) {
       return res.status(400).json({ error: "Coloque no mínimo uma imagem" });
     }
 
@@ -35,15 +36,12 @@ module.exports = class projectController {
 
     if (!isPremium) {
       if (imagens.length > 3) {
-        return res
-          .status(400)
-          .json({
-            error:
-              "Limite de apenas 3 imagens. Assine o plano premium para inserir mais.",
-          });
+        return res.status(400).json({
+          error:
+            "Limite de apenas 3 imagens. Assine o plano premium para inserir mais.",
+        });
       }
     }
-
 
     try {
       const queryProjeto = `INSERT INTO projeto (ID_user, titulo, descricao, criado_em) VALUES (?, ?, ?, NOW())`;
@@ -114,13 +112,7 @@ module.exports = class projectController {
         .json({ error: "Você não tem permissão de atualizar esse projeto." });
     }
 
-    if (
-      !ID_user ||
-      !titulo ||
-      !descricao ||
-      !ID_projeto ||
-      !imagens
-    ) {
+    if (!ID_user || !titulo || !descricao || !ID_projeto || !imagens) {
       return res.status(400).json({
         error: "Todos os campos devem ser preenchidos",
       });
@@ -142,12 +134,10 @@ module.exports = class projectController {
       }
 
       if (!isPremium && imagens.length > 3) {
-        return res
-          .status(400)
-          .json({
-            error:
-              "Limite de apenas 3 imagens. Assine o plano premium para inserir mais.",
-          });
+        return res.status(400).json({
+          error:
+            "Limite de apenas 3 imagens. Assine o plano premium para inserir mais.",
+        });
       }
     }
 
@@ -172,10 +162,14 @@ module.exports = class projectController {
             (err, result) => {
               if (err) {
                 console.error(err);
-                return res.status(500).json({ error: "Erro ao atualizar projeto" });
+                return res
+                  .status(500)
+                  .json({ error: "Erro ao atualizar projeto" });
               }
               if (result.affectedRows === 0) {
-                return res.status(404).json({ error: "Projeto não encontrado" });
+                return res
+                  .status(404)
+                  .json({ error: "Projeto não encontrado" });
               }
 
               const promises = imagens.map((img, index) => {
@@ -216,7 +210,10 @@ module.exports = class projectController {
                             console.error("Erro ao inserir imagem:", err);
                             return reject(err);
                           }
-                          if (!insertResult || insertResult.affectedRows === 0) {
+                          if (
+                            !insertResult ||
+                            insertResult.affectedRows === 0
+                          ) {
                             return reject(new Error("Falha ao salvar imagem."));
                           }
                           return resolve();
@@ -532,7 +529,7 @@ module.exports = class projectController {
   static async deleteProject(req, res) {
     const ID_projeto = req.params.ID_projeto;
     const idCorreto = Number(req.userId);
-    const ID_user = Number(req.body.ID_user)
+    const ID_user = Number(req.body.ID_user);
 
     if (idCorreto !== ID_user) {
       return res
@@ -620,15 +617,32 @@ module.exports = class projectController {
             ON p.ID_projeto = i.ID_projeto AND i.ordem = 1
           WHERE titulo LIKE ? ORDER BY p.criado_em DESC;
         `;
-      console.log("passou aqui")
+      console.log("passou aqui");
       connect.query(query, [search], (err, results) => {
         if (err) {
           console.error(err);
-          console.log(err.message);
           return res.status(500).json({ error: "Erro ao buscar projetos" });
         }
-        console.log(connect.format(query, [search]));
-        return res.status(200).json(results);
+        if (!results || results.length === 0) {
+          return res.status(200).json({ error: "Projetos não encontrados." });
+        }
+
+        const listaProjetos = results.map((proj) => {
+          let imagemBase64 = null;
+          if (proj.imagem && Buffer.isBuffer(proj.imagem)) {
+            imagemBase64 = proj.imagem.toString("base64");
+          }
+
+          return {
+            ID_projeto: proj.ID_projeto,
+            titulo: proj.titulo,
+            total_curtidas: proj.total_curtidas,
+            imagem: imagemBase64,
+            tipo_imagem: proj.tipo_imagem,
+          };
+        });
+
+        return res.status(200).json({ profile_projeto: listaProjetos });
       });
     } catch (error) {
       console.error(error);
