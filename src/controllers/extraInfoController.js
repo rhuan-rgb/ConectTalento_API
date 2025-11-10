@@ -13,7 +13,7 @@ module.exports = class extraInfoController {
      const query =
       "UPDATE extrainfo SET link_insta = ?, link_facebook = ?,link_github = ?, link_pinterest = ?, numero_telefone = ? WHERE ID_user = ?;";
 
-      if(numero_telefone.length !== 11){
+      if(numero_telefone.length !== 11 && numero_telefone.length > 0){
         return res.status(400).json({error: "número de telefone inválido. Deve conter 11 dígitos"});
       }
 
