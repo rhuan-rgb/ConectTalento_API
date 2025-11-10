@@ -1,15 +1,23 @@
-//Importa a instância do Express configurada em index.js
+const fs = require('fs');
+const https = require('https');
+const http = require('http');
 const app = require("./index");
-const cors = require('cors');
 
-const corsOpitions = {
-    origin: '*', //Substitua pela origem permitida
-    methods: 'GET,HEAD,PUT,PATH.POST,DELETE', //Métodos HTTP permitidos
-    credentials: true, //Permite o uso de cookies e credenciais
-    optionsSuccessStatus: 204, //Define o status de resposta para o método OPTIONS
+// Opções para o HTTPS com os certificados gerados
+const options = {
+  key: fs.readFileSync('/etc/letsencrypt/live/api-conectalento.eastus2.cloudapp.azure.com/privkey.pem'),
+  cert: fs.readFileSync('/etc/letsencrypt/live/api-conectalento.eastus2.cloudapp.azure.com/fullchain.pem')
 };
 
-//Aplicando o middleware CORS no app
-app.use(cors(corsOpitions));
-//Inicia o servidor na porta 5000, tornando a API acessível em http://localhost:5000
-app.listen(5000);
+// Iniciar o servidor HTTPS na porta 5000
+https.createServer(options, app).listen(5000, () => {
+  console.log('Servidor HTTPS rodando na porta 5000');
+});
+
+// (Opcional) Redirecionar HTTP para HTTPS
+http.createServer((req, res) => {
+  res.writeHead(301, { "Location": `https://${req.headers.host}${req.url}` });
+  res.end();
+}).listen(80, () => {
+  console.log('Redirecionamento HTTP para HTTPS habilitado na porta 80');
+});
