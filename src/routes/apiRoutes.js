@@ -12,7 +12,7 @@ router.post('/login', userController.loginUser);
 router.post("/pagamento-pix/:id", verifyJWT, userController.paymentUserPix)
 router.put("/user/forgotpassword/", userController.forgotPassword);
 router.put("/user/newpassword/:id", verifyJWT, userController.updatePassword);
-router.put('/user/:id', upload.single("imagem"), verifyJWT, userController.updateUser);
+router.put('/user/:id', upload.array("imagens"), verifyJWT, userController.updateUser);
 router.delete('/user/:id',verifyJWT, userController.deleteUser); 
 router.get("/pagamento/pix/status/:id/:paymentId", verifyJWT, userController.getPaymentPixStatus);
 router.get("/user", userController.getAllUsers);

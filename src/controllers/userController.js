@@ -529,7 +529,7 @@ module.exports = class userController {
         .status(400)
         .json({ error: "Você não tem permissão de atualizar essa conta." });
     }
-    if (!email || !biografia || !username_ || !name) {
+    if (!email || !username_ || !name) {
       return res
         .status(400)
         .json({ error: "Todos os campos são obrigatórios." });
