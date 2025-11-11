@@ -17,14 +17,6 @@ module.exports = class extraInfoController {
         return res.status(400).json({error: "número de telefone inválido. Deve conter 11 dígitos"});
       }
 
-      if(!link_insta.startsWith("https://") ||
-        !link_facebook.startsWith("https://") ||
-        !link_github.startsWith("https://") ||
-        !link_pinterest.startsWith("https://") ||
-        !numero_telefone.startsWith("https://")
-        ){
-          return res.status(400).json({error: "links inválidos. Devem ser https"});
-        }
 
     try {
       connect.query(
