@@ -1,5 +1,5 @@
 const router = require('express').Router();
-const verifyJWT = require("../services/verifyJWT"); // esperar para implementar
+const verifyJWT = require("../services/verifyJWT"); 
 const upload = require("../services/upload");
 
 const userController = require("../controllers/userController");
