@@ -17,6 +17,11 @@ module.exports = class userController {
     if (password !== confirmPassword) {
       return res.status(400).json({ error: "As senhas não coincidem" });
     }
+
+    if (password.length < 8){
+      return res.status(400).json({error: "A senha deve conter pelo menos 8 dígitos"});
+    }
+
     if (!validateUser.validateDataEmail(email)) {
       return res.status(400).json({ error: "Email inválido" });
     }
@@ -71,7 +76,7 @@ module.exports = class userController {
                 const token = jwt.sign(
                   { ID_user: user.ID_user },
                   process.env.SECRET,
-                  { expiresIn: "1h" }
+                  { expiresIn: "24h" }
                 );
 
                 return res.status(200).json({
@@ -696,6 +701,10 @@ module.exports = class userController {
       return res
         .status(400)
         .json({ error: "Informe sua senha atual e sua nova senha" });
+    }
+
+    if (nova_senha.length < 8){
+      return res.status(400).json({error: "A senha deve conter pelo menos 8 dígitos"});
     }
 
     try {
