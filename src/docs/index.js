@@ -1,5 +1,9 @@
+// docs/index.js
 const userPaths = require("./paths/user");
 const userSchemas = require("./schemas/user");
+
+const projectPaths = require("./paths/project");
+const projectSchemas = require("./schemas/projects");
 
 module.exports = {
   openapi: "3.0.0",
@@ -15,10 +19,10 @@ module.exports = {
       url: "http://localhost:5000/api/v1",
       description: "Servidor local",
     },
-    // {
-    //   url: "http://IP-DA-SUA-VM/api/v1",
-    //   description: "Servidor de Produção",
-    // }
+    {
+      url: "https://api-conectalento.eastus2.cloudapp.azure.com:5000/api/v1",
+      description: "Servidor de Produção",
+    },
   ],
 
   /**
@@ -26,7 +30,7 @@ module.exports = {
    */
   paths: {
     ...userPaths,
-    // ...projectPaths,
+    ...projectPaths,  // Integrando o módulo de projetos
     // ...postPaths,
     // ...outros módulos
   },
@@ -37,18 +41,18 @@ module.exports = {
      */
     schemas: {
       ...userSchemas,
-      // ...projectSchemas,
+      ...projectSchemas, // Integrando os schemas de projetos
     },
 
     /**
      * AUTENTICAÇÃO JWT
      */
     securitySchemes: {
-        bearerAuth: {
-            type: "apiKey",
-            in: "header",
-            name: "Authorization",
-        },
+      bearerAuth: {
+        type: "apiKey",
+        in: "header",
+        name: "Authorization",
+      },
     },
   },
 
