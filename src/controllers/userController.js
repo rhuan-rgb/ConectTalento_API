@@ -17,6 +17,11 @@ module.exports = class userController {
     if (password !== confirmPassword) {
       return res.status(400).json({ error: "As senhas não coincidem" });
     }
+
+    if (password.length < 8){
+      return res.status(400).json({error: "A senha deve conter pelo menos 8 dígitos"});
+    }
+
     if (!validateUser.validateDataEmail(email)) {
       return res.status(400).json({ error: "Email inválido" });
     }
@@ -33,9 +38,9 @@ module.exports = class userController {
       if (codeOk === true) {
         try {
           // pega o usuário para ter o ID_user e montar o token
-          const qSelectUser =
+          const querySelectUser =
             "SELECT ID_user, email, username, name, plano, criado_em FROM usuario WHERE email = ? LIMIT 1";
-          connect.query(qSelectUser, [email], (err, rows) => {
+          connect.query(querySelectUser, [email], (err, rows) => {
             if (err) {
               return res
                 .status(500)
@@ -48,26 +53,37 @@ module.exports = class userController {
             const user = rows[0];
 
             // autentica o usuário
-            const qUpdate =
+            const queryUpdate =
               "UPDATE usuario SET autenticado = true WHERE ID_user = ? LIMIT 1";
-            connect.query(qUpdate, [user.ID_user], (err2) => {
+            connect.query(queryUpdate, [user.ID_user], (err2) => {
               if (err2) {
                 return res
                   .status(500)
                   .json({ error: "Erro ao autenticar usuário.", err: err2 });
               }
 
-              // gera JWT
-              const token = jwt.sign(
-                { ID_user: user.ID_user },
-                process.env.SECRET,
-                { expiresIn: "1h" }
-              );
+              const queryExtrainfo =
+                "INSERT INTO extrainfo (link_insta, link_facebook, link_github, link_pinterest, numero_telefone, ID_user) VALUES (null, null, null, null, null, ?);";
+              connect.query(queryExtrainfo, [user.ID_user], (err3) => {
+                if (err3) {
+                  return res.status(500).json({
+                    error: "Erro ao inserir informações extra para o usuário.",
+                    err: err3,
+                  });
+                }
 
-              return res.status(200).json({
-                message: "Código válido. Usuário autenticado.",
-                user: { ...user, autenticado: true }, // não retorna senha
-                token,
+                // gera JWT
+                const token = jwt.sign(
+                  { ID_user: user.ID_user },
+                  process.env.SECRET,
+                  { expiresIn: "24h" }
+                );
+
+                return res.status(200).json({
+                  message: "Código válido. Usuário autenticado.",
+                  user: { ...user, autenticado: true },
+                  token,
+                });
               });
             });
           });
@@ -115,6 +131,14 @@ module.exports = class userController {
           [email, hashedPassword, username, name],
           async (err, result) => {
             if (err) {
+              if (
+                err.code == "ER_DUP_ENTRY" &&
+                err.sqlMessage.includes("'usuario.username'")
+              ) {
+                return res
+                  .status(500)
+                  .json({ error: "username já existe", detail: err });
+              }
               return res
                 .status(500)
                 .json({ error: "Erro interno do servidor", err });
@@ -145,96 +169,128 @@ module.exports = class userController {
   }
 
   static async forgotPassword(req, res) {
-    const userId = String(req.params.id);
-    const idCorreto = String(req.userId);
     const { email, password, confirmPassword, code, atualizar } = req.body;
 
-    if (idCorreto !== userId) {
-      return res
-        .status(400)
-        .json({ error: "Você não tem permissão de trocar a senha nessa conta." });
-    }
     if (!email) {
       return res
         .status(400)
         .json({ error: "O e-mail deve ser passado para o envio do código." });
     }
+
     if (!validateUser.validateDataEmail(email)) {
       return res.status(400).json({ error: "E-mail inválido" });
     }
-    if (!await validateUser.checkIfEmailCadastrado(email)) {
+
+    if (!(await validateUser.checkIfEmailCadastrado(email))) {
       return res.status(400).json({ error: "E-mail ainda não cadastrado" });
     }
 
-    if (!code) {
-      try {
+    try {
+      // Se não enviou código, gera e envia
+      if (!code) {
+        const [user] = await new Promise((resolve, reject) => {
+          connect.query(
+            "SELECT ID_user FROM usuario WHERE email = ? LIMIT 1",
+            [email],
+            (err, results) => {
+              if (err) return reject(err);
+              resolve(results);
+            }
+          );
+        });
+
+        if (!user) {
+          return res.status(404).json({ error: "Usuário não encontrado" });
+        }
+
+        const userId = user.ID_user;
+
         const generatedCode = await validateUser.sendCodeToEmail(email, userId);
+
         if (!generatedCode) {
           return res
             .status(500)
             .json({ error: "Falha ao enviar o código. Tente novamente." });
         }
-        return res
-          .status(201)
-          .json({ message: "Código enviado ao e-mail." });
-      } catch (error) {
-        console.error("Erro ao atualizar a senha:", error);
-        return res.status(500).json({ error: "Erro interno do servidor" });
+
+        return res.status(201).json({ message: "Código enviado ao e-mail." });
       }
-    }
 
-    if (code) {
-      const codeOk = await validateUser.validateCode(email, code); // valida se o codigo é valido ou não
+      // Se enviou código, valida e atualiza senha se necessário
+      if (code) {
+        const codeOk = await validateUser.validateCode(email, code);
 
-      if (codeOk === true) {
-
-        if (atualizar == false) {
-          return res.status(200).json({ message: "Código válido." });
-        }
-
-        if (atualizar == true) {
-          
-          if (!password || !confirmPassword) {
-            return res.status(400).json({ error: "Preencha todos os campos de senha." });
+        if (codeOk === true) {
+          if (!atualizar) {
+            return res.status(200).json({ message: "Código válido." });
           }
 
-          if (password !== confirmPassword) {
-            return res.status(400).json({ error: "As senhas não coincidem." });
-          }
+          if (atualizar) {
+            if (!password || !confirmPassword) {
+              return res
+                .status(400)
+                .json({ error: "Preencha todos os campos de senha." });
+            }
 
-          try {
-            // Gera hash da nova senha
+            if (password !== confirmPassword) {
+              return res
+                .status(400)
+                .json({ error: "As senhas não coincidem." });
+            }
+
+            // Busca ID do usuário
+            const [user] = await new Promise((resolve, reject) => {
+              connect.query(
+                "SELECT ID_user FROM usuario WHERE email = ? LIMIT 1",
+                [email],
+                (err, results) => {
+                  if (err) return reject(err);
+                  resolve(results);
+                }
+              );
+            });
+
+            if (!user) {
+              return res.status(404).json({ error: "Usuário não encontrado" });
+            }
+
+            const userId = user.ID_user;
+
             const novaSenhaHash = await validateUser.hashPassword(password);
 
-            const queryUpdate = "UPDATE usuario SET senha = ? WHERE ID_user = ?";
-
-            connect.query(queryUpdate, [novaSenhaHash, userId], (err, result) => {
-              if (err) {
-                console.error(err);
-                return res.status(500).json({ error: "Erro ao atualizar a senha" });
-              }
-              if (result.affectedRows === 0) {
-                return res.status(500).json({ error: "Usuário não encontrado" });
-              }
-              return res
-                .status(200)
-                .json({ message: "Senha atualizada com sucesso" });
+            await new Promise((resolve, reject) => {
+              connect.query(
+                "UPDATE usuario SET senha = ? WHERE ID_user = ?",
+                [novaSenhaHash, userId],
+                (err, result) => {
+                  if (err) return reject(err);
+                  if (result.affectedRows === 0) {
+                    return reject(new Error("Usuário não encontrado"));
+                  }
+                  resolve(result);
+                }
+              );
             });
-          } catch (error) {
-            console.error("Erro ao atualizar a senha:", error);
-            return res.status(500).json({ error: "Erro interno do servidor" });
+
+            return res
+              .status(200)
+              .json({ message: "Senha atualizada com sucesso" });
           }
+        } else if (codeOk === "expirado") {
+          return res.status(400).json({
+            error: "Tempo expirado. Tente reenviar o código novamente.",
+          });
+        } else {
+          return res
+            .status(400)
+            .json({ error: "Código inválido. Tente novamente." });
         }
-      } else if (codeOk === "expirado") {
-        return res.status(400).json({
-          error: "Tempo expirado. Tente reenviar o código novamente.",
-        });
-      } else {
-        return res.status(400).json({ error: "Inválido. Tente novamente" });
       }
+    } catch (error) {
+      console.error("Erro na função forgotPassword:", error);
+      return res.status(500).json({ error: "Erro interno do servidor" });
     }
   }
-
 
   static async loginUser(req, res) {
     const { email, password } = req.body;
@@ -471,14 +527,14 @@ module.exports = class userController {
     const userId = String(req.params.id);
     const idCorreto = String(req.userId);
     const arquivo = req.files;
-    const { email, biografia, username, name } = req.body;
+    const { email, biografia, username_, name, code } = req.body;
 
     if (idCorreto !== userId) {
       return res
         .status(400)
         .json({ error: "Você não tem permissão de atualizar essa conta." });
     }
-    if (!email || !biografia || !username || !name) {
+    if (!email || !username_ || !name) {
       return res
         .status(400)
         .json({ error: "Todos os campos são obrigatórios." });
@@ -489,6 +545,8 @@ module.exports = class userController {
     if (arquivo?.length > 1) {
       return res.status(400).json({ error: "Coloque somente uma imagem" });
     }
+
+    const username = username_.trim();
 
     const tipo_imagem = arquivo?.[0]?.mimetype ?? null;
     const imagem = arquivo?.[0]?.buffer ?? null;
@@ -511,7 +569,9 @@ module.exports = class userController {
       if (email !== current.email) {
         const emailJaExiste = await validateUser.checkIfEmailCadastrado(email);
         if (emailJaExiste) {
-          return res.status(400).json({ error: "Email já cadastrado" });
+          return res
+            .status(400)
+            .json({ error: "Email já cadastrado por outro usuário" });
         }
       }
       if (username !== current.username) {
@@ -523,26 +583,101 @@ module.exports = class userController {
         }
       }
 
-      const query = `UPDATE usuario SET email=?, username=?, name=?, biografia=?, imagem= ?, tipo_imagem=? WHERE ID_user = ?`;
-      const values = [email, username, name, biografia, imagem, tipo_imagem, userId];
-
-      connect.query(query, values, function (err, results) {
-        if (err) {
-          if (err.code === "ER_DUP_ENTRY") {
+      //se o email for mudado, deve-se verificá-lo com um código
+      if (email !== current.email) {
+        if (!code) {
+          const generatedCode = await validateUser.sendCodeToEmail(
+            email,
+            userId
+          );
+          if (!generatedCode) {
             return res
-              .status(400)
-              .json({ error: "E-mail já cadastrado por outro usuário." });
+              .status(500)
+              .json({ error: "Falha ao enviar o código. Tente novamente." });
           }
-          console.error(err);
-          return res.status(500).json({ error: "Erro Interno do Servidor" });
+
+          return res.status(202).json({
+            message: "Código enviado ao email.",
+          });
+        } 
+          const codeOk = await validateUser.validateCode(current.email, code); // valida se o codigo é valido ou não
+          if (codeOk) {
+            const query = `UPDATE usuario SET email=?, username=?, name=?, biografia=?, imagem= ?, tipo_imagem=? WHERE ID_user = ?`;
+            const values = [
+              email,
+              username,
+              name,
+              biografia,
+              imagem,
+              tipo_imagem,
+              userId,
+            ];
+
+            connect.query(query, values, function (err, results) {
+              if (err) {
+                if (err.code === "ER_DUP_ENTRY") {
+                  return res
+                    .status(400)
+                    .json({ error: "E-mail já cadastrado por outro usuário." });
+                }
+                console.error(err);
+                return res
+                  .status(500)
+                  .json({ error: "Erro Interno do Servidor" });
+              }
+              if (results.affectedRows === 0) {
+                return res
+                  .status(404)
+                  .json({ error: "Usuário não encontrado." });
+              }
+              return res
+                .status(200)
+                .json({ message: "Usuário atualizado com sucesso." });
+            });
+            return
+        } else if (codeOk === "expirado") {
+          return res.status(400).json({
+            error: "Código expirado. Tente cadastrar-se novamente.",
+          });
+        } else {
+          console.log(codeOk);
+          return res.status(400).json({ error: "Código inválido." });
         }
-        if (results.affectedRows === 0) {
-          return res.status(404).json({ error: "Usuário não encontrado." });
-        }
-        return res
-          .status(200)
-          .json({ message: "Usuário atualizado com sucesso." });
-      });
+      } else {
+        const query = `UPDATE usuario SET email=?, username=?, name=?, biografia=?, imagem= ?, tipo_imagem=? WHERE ID_user = ?`;
+            const values = [
+              email,
+              username,
+              name,
+              biografia,
+              imagem,
+              tipo_imagem,
+              userId,
+            ];
+
+            connect.query(query, values, function (err, results) {
+              if (err) {
+                if (err.code === "ER_DUP_ENTRY") {
+                  return res
+                    .status(400)
+                    .json({ error: "E-mail já cadastrado por outro usuário." });
+                }
+                console.error(err);
+                return res
+                  .status(500)
+                  .json({ error: "Erro Interno do Servidor" });
+              }
+              if (results.affectedRows === 0) {
+                return res
+                  .status(404)
+                  .json({ error: "Usuário não encontrado." });
+              }
+              return res
+                .status(200)
+                .json({ message: "Usuário atualizado com sucesso." });
+            });
+            return
+      }
     } catch (error) {
       console.error("Erro ao executar a consulta:", error);
       return res.status(500).json({ error: "Erro Interno de Servidor" });
@@ -566,6 +701,10 @@ module.exports = class userController {
       return res
         .status(400)
         .json({ error: "Informe sua senha atual e sua nova senha" });
+    }
+
+    if (nova_senha.length < 8){
+      return res.status(400).json({error: "A senha deve conter pelo menos 8 dígitos"});
     }
 
     try {
@@ -649,11 +788,9 @@ module.exports = class userController {
     const { email } = req.body;
 
     if (idCorreto !== userId) {
-      return res
-        .status(400)
-        .json({
-          error: "Você não tem permissão de pagar um plano nessa conta.",
-        });
+      return res.status(400).json({
+        error: "Você não tem permissão de pagar um plano nessa conta.",
+      });
     }
     if (!email) {
       return res.status(400).json({ error: "Email do pagador é obrigatório." });
@@ -676,7 +813,7 @@ module.exports = class userController {
 
       // 4) Body da Payments API (ATENÇÃO: aqui amount é number e os campos têm outros nomes)
       const paymentBody = {
-        transaction_amount: 0.1, // number na Payments API
+        transaction_amount: 0.01, // number na Payments API
         description: `Plano user:${userId}`, // descrição livre
         payment_method_id: "pix", // PIX direto
         payer: { email }, // e-mail do pagador (cliente)
@@ -701,12 +838,10 @@ module.exports = class userController {
         ok: true,
         payment_id: pay?.id, // este é o ID numérico do Payment
         status: pay?.status || "pending",
-        amount: pay?.transaction_amount || 10.0,
+        amount: pay?.transaction_amount || 0.01,
         qr_code: tx.qr_code || null, // copia e cola
         qr_code_base64: tx.qr_code_base64 || null,
         ticket_url: tx.ticket_url || null, // link do MP
-        // preferimos a data que o MP retornou; se vier vazio, devolvemos a que enviamos
-        expires_at: tx.qr_code_expiration_date,
       });
     } catch (error) {
       console.error("MP PAYMENT ERROR:", error?.response?.data || error);
@@ -739,7 +874,6 @@ module.exports = class userController {
       const pay = await paymentsApi.get({ id: mpPaymentId });
 
       const status = pay?.status; // 'approved', 'pending', 'rejected', ...
-      const status_detail = pay?.status_detail; // ex: 'accredited' p/ aprovado
       const tx = pay?.point_of_interaction?.transaction_data || {};
 
       // Se aprovado, ativa o plano
@@ -751,19 +885,15 @@ module.exports = class userController {
             return res.status(200).json({
               payment_id: mpPaymentId,
               status,
-              status_detail,
               updated: false,
-              amount: pay?.transaction_amount || null,
-              expires_at: tx.qr_code_expiration_date || null,
+              amount: pay?.transaction_amount,
             });
           }
           return res.status(200).json({
             payment_id: mpPaymentId,
             status,
-            status_detail,
             updated: true,
-            amount: pay?.transaction_amount || null,
-            expires_at: tx.qr_code_expiration_date || null,
+            amount: pay?.transaction_amount,
           });
         });
         return;
@@ -773,9 +903,7 @@ module.exports = class userController {
       return res.status(200).json({
         payment_id: mpPaymentId,
         status: status || "unknown",
-        status_detail: status_detail || null,
-        amount: pay?.transaction_amount || null,
-        expires_at: tx.qr_code_expiration_date || null,
+        amount: pay?.transaction_amount,
       });
     } catch (error) {
       console.error(error);

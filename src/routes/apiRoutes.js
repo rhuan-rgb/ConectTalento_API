@@ -10,9 +10,9 @@ const extraInfoController = require("../controllers/extraInfoController")
 router.post('/user', userController.createUser);
 router.post('/login', userController.loginUser);
 router.post("/pagamento-pix/:id", verifyJWT, userController.paymentUserPix)
-router.put('/user/:id', upload.array("imagens"), verifyJWT, userController.updateUser);
+router.put("/user/forgotpassword/", userController.forgotPassword);
 router.put("/user/newpassword/:id", verifyJWT, userController.updatePassword);
-router.put("/user/forgotpassword/:id", verifyJWT, userController.forgotPassword);
+router.put('/user/:id', upload.array("imagens"), verifyJWT, userController.updateUser);
 router.delete('/user/:id',verifyJWT, userController.deleteUser); 
 router.get("/pagamento/pix/status/:id/:paymentId", verifyJWT, userController.getPaymentPixStatus);
 router.get("/user", userController.getAllUsers);
@@ -31,10 +31,8 @@ router.delete("/project/:ID_projeto", verifyJWT, projectController.deleteProject
 router.put("/project/:id", verifyJWT, upload.array("imagens"),projectController.updateProject);
 
 //Rotas extraInfoController
-router.post("/extrainfo", extraInfoController.createExtraInfo);
 router.get("/extrainfo/:id", extraInfoController.getExtraInfo);
-router.put("/extrainfo", extraInfoController.updateExtraInfo);
-router.delete("/extrainfo/:id", extraInfoController.deleteExtraInfo);
+router.put("/extrainfo", verifyJWT, extraInfoController.updateExtraInfo);
 
 
 
