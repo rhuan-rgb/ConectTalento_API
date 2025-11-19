@@ -238,6 +238,10 @@ module.exports = class userController {
                 .json({ error: "As senhas não coincidem." });
             }
 
+            if( password.length < 8){
+              return res.status(400).json({error: "A senha deve conter pelo menos 8 dígitos"});
+            }
+
             // Busca ID do usuário
             const [user] = await new Promise((resolve, reject) => {
               connect.query(
