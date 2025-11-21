@@ -32,3 +32,11 @@ segue o passo a passo:
 - após os processos terminarem, segure a tecla "ctrl" e aperte "c" até que o terminal seja cancelado;
 - feito isso, cole novamente este comando: docker compose up --build
 - pronto, a api está funcionando.
+
+## 📄 Swagger (Documentação da API)
+
+A documentação da API pode ser acessada em:
+
+**https://conectalento-teste.northcentralus.cloudapp.azure.com:5000/docs/**
+
+
