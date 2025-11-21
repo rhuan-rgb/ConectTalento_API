@@ -6,6 +6,7 @@ module.exports = {
       titulo: { type: "string", example: "Meu Projeto" },
       descricao: { type: "string", example: "Descrição detalhada do projeto" },
       total_curtidas: { type: "integer", example: 10 },
+
       autor: {
         type: "object",
         properties: {
@@ -15,6 +16,7 @@ module.exports = {
           tipo_imagem: { type: "string", example: "image/png" }
         }
       },
+
       imagens: {
         type: "array",
         items: {

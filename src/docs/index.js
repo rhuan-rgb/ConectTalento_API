@@ -3,7 +3,10 @@ const userPaths = require("./paths/user");
 const userSchemas = require("./schemas/user");
 
 const projectPaths = require("./paths/project");
-const projectSchemas = require("./schemas/projects");
+const projectSchemas = require("./schemas/project");
+
+const extrainfoPaths = require("./paths/extrainfo");
+const extrainfoSchemas = require("./schemas/extrainfo");
 
 module.exports = {
   openapi: "3.0.0",
@@ -20,7 +23,7 @@ module.exports = {
       description: "Servidor local",
     },
     {
-      url: "https://api-conectalento.eastus2.cloudapp.azure.com:5000/api/v1",
+      url: "https://conectalento-teste.northcentralus.cloudapp.azure.com:5000/api/v1",
       description: "Servidor de Produção",
     },
   ],
@@ -30,9 +33,8 @@ module.exports = {
    */
   paths: {
     ...userPaths,
-    ...projectPaths,  // Integrando o módulo de projetos
-    // ...postPaths,
-    // ...outros módulos
+    ...projectPaths,  // Integrando o módulo 
+    ...extrainfoPaths
   },
 
   components: {
@@ -41,7 +43,8 @@ module.exports = {
      */
     schemas: {
       ...userSchemas,
-      ...projectSchemas, // Integrando os schemas de projetos
+      ...projectSchemas, // Integrando os schemas 
+      ...extrainfoSchemas
     },
 
     /**
@@ -55,10 +58,4 @@ module.exports = {
       },
     },
   },
-
-  /**
-   * Se quiser exigir JWT em TODAS as rotas,
-   * descomente abaixo.
-   */
-  // security: [{ bearerAuth: [] }],
 };

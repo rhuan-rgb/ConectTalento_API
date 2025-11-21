@@ -331,7 +331,7 @@ module.exports = class userController {
         const token = jwt.sign(
           { ID_user: user.ID_user }, // Usar ID_user no payload do token
           process.env.SECRET, // Chave secreta do ambiente
-          { expiresIn: "1h" } // Expiração do token
+          { expiresIn: "24h" } // Expiração do token
         );
 
         // Remover a senha do objeto de resposta antes de enviar ao cliente
