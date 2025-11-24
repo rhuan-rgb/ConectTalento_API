@@ -37,6 +37,6 @@ segue o passo a passo:
 
 A documentação da API pode ser acessada em:
 
-**https://conectalento-teste.northcentralus.cloudapp.azure.com:5000/docs/**
+**https://api-conectalento.eastus2.cloudapp.azure.com:5000/docs/**
 
 
