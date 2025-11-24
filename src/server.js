@@ -21,7 +21,7 @@ app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 const options = {
   key: fs.readFileSync('/etc/letsencrypt/live/api-conectalento.eastus2.cloudapp.azure.com/privkey.pem'),
-  cert: fs.readFileSync('/etc/letsencrypt/live/api-conectalento.eastus2.cloudapp.azure.com:5000/fullchain.pem')
+  cert: fs.readFileSync('/etc/letsencrypt/live/api-conectalento.eastus2.cloudapp.azure.com/fullchain.pem')
 };
 
 https.createServer(options, app).listen(5000, () => {
