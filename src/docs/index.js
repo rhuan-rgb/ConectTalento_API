@@ -24,7 +24,11 @@ module.exports = {
     },
     {
       url: "https://conectalento-teste.northcentralus.cloudapp.azure.com:5000/api/v1",
-      description: "Servidor de Produção",
+      description: "Servidor Teste",
+    },
+    {
+      url: "https://api-conectalento.eastus2.cloudapp.azure.com:5000/api/v1",
+      description: "Servidor de Produção"
     },
   ],
 
