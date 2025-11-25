@@ -1,5 +1,5 @@
 const router = require('express').Router();
-const verifyJWT = require("../services/verifyJWT"); // esperar para implementar
+const verifyJWT = require("../services/verifyJWT"); 
 const upload = require("../services/upload");
 
 const userController = require("../controllers/userController");
@@ -20,7 +20,7 @@ router.get("/user/:user", userController.getUserByName);
 router.get("/userId/:id", userController.getUserById);
 
 //Rotas projetoController
-router.post("/project/:ID_user", verifyJWT, upload.array("imagens"), projectController.createProject);
+router.post("/project/:ID_user", verifyJWT, upload.array("imagens"), projectController.createProject); 
 router.post("/like_dislike_projects", verifyJWT, projectController.like_or_dislike_projects)
 router.get("/projects", projectController.getAllProjects);
 router.get("/projects/:user", projectController.getProjectsByUserName);
