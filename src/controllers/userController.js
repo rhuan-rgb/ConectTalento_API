@@ -333,15 +333,13 @@ module.exports = class userController {
 
         // Gerar o token de autenticação
         const token = jwt.sign(
-          { ID_user: user.ID_user }, // Usar ID_user no payload do token
-          process.env.SECRET, // Chave secreta do ambiente
-          { expiresIn: "24h" } // Expiração do token
+          { ID_user: user.ID_user },
+          process.env.SECRET, 
+          { expiresIn: "24h" }
         );
 
-        // Remover a senha do objeto de resposta antes de enviar ao cliente
         delete user.senha;
 
-        // Retornar os dados do usuário e o token
         return res.status(200).json({
           message: "Login bem sucedido!",
           user,
@@ -817,7 +815,7 @@ module.exports = class userController {
 
       // 4) Body da Payments API (ATENÇÃO: aqui amount é number e os campos têm outros nomes)
       const paymentBody = {
-        transaction_amount: 0.01, // number na Payments API
+        transaction_amount: 1, // number na Payments API
         description: `Plano user:${userId}`, // descrição livre
         payment_method_id: "pix", // PIX direto
         payer: { email }, // e-mail do pagador (cliente)
@@ -842,7 +840,7 @@ module.exports = class userController {
         ok: true,
         payment_id: pay?.id, // este é o ID numérico do Payment
         status: pay?.status || "pending",
-        amount: pay?.transaction_amount || 0.01,
+        amount: pay?.transaction_amount || 1,
         qr_code: tx.qr_code || null, // copia e cola
         qr_code_base64: tx.qr_code_base64 || null,
         ticket_url: tx.ticket_url || null, // link do MP
